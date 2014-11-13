@@ -11,12 +11,6 @@ int main(int argc, char *argv[])
         w=new MainWindow();
         w->show();
     }
-
-
 //    lview.show();
-
-
-
-
     return a.exec();
 }
