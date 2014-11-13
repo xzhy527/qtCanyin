@@ -11,6 +11,6 @@ int main(int argc, char *argv[])
         w=new MainWindow();
         w->show();
     }
-    qDebug()<<"程序开始运行了,2014-11-13 17:49:10";
+    qDebug()<<"程序开始运行了,2014-11-13 17:49:55";
     return a.exec();
 }
