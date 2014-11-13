@@ -1,1 +1,7 @@
+<<<<<<< .mine
 I love you 555ddddd78899962221111111111
+
+=======
+I love you 555ddddd dfdasfdsa
+
+>>>>>>> .theirs
