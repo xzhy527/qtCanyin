@@ -13,4 +13,5 @@ int main(int argc, char *argv[])
     }
 //    lview.show();
     return a.exec();
+    //你好
 }
