@@ -1,1 +1,11 @@
+<<<<<<< HEAD
 这是真的内容
+=======
+<<<<<<< .mine
+I love you 555ddddd78899962221111111111
+
+=======
+I love you 555ddddd dfdasfdsa
+
+>>>>>>> .theirs
+>>>>>>> 5f325a0632def23e9744c8cc892e493dac08283d
