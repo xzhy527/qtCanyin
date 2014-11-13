@@ -11,6 +11,6 @@ int main(int argc, char *argv[])
         w=new MainWindow();
         w->show();
     }
-    qDebug()<<"123456789";
+    qDebug()<<"真的吗";
     return a.exec();
 }
