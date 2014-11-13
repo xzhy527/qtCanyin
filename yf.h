@@ -33,7 +33,9 @@ signals:
 public slots:
     void networkfinished(QNetworkReply*);
 private:
+
     QJsonDocument *jsondocument;
 };
 //一封测试
+
 #endif // YF_H
