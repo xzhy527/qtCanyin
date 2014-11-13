@@ -12,6 +12,6 @@ int main(int argc, char *argv[])
         w->show();
     }
 //    lview.show();
-    qDebug()<<"nihao";
+    qDebug()<<"nihao小小";
     return a.exec();
 }
