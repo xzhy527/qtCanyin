@@ -33,6 +33,7 @@ signals:
 public slots:
     void networkfinished(QNetworkReply*);
 private:
+
     QJsonDocument *jsondocument;
 };
 
