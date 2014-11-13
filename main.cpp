@@ -11,7 +11,6 @@ int main(int argc, char *argv[])
         w=new MainWindow();
         w->show();
     }
-//    lview.show();
-    qDebug()<<"nihao小小";
+    qDebug()<<"程序开始运行了";
     return a.exec();
 }
