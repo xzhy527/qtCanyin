@@ -5,6 +5,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+
     dishesModel=new QStandardItemModel(this);
     orderModel=new QStandardItemModel(this);
     viewtype=scaleview;

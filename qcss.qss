@@ -1,0 +1,10 @@
+QLabel{
+    color:black;
+    background:black;
+
+}
+QPushButton{
+    broder:1px;
+    color:black;
+    background:black;
+｝

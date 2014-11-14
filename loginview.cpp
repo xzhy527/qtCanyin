@@ -1,7 +1,6 @@
 #include "loginview.h"
 #include "ui_loginview.h"
 #include <QDebug>
-
 LoginView::LoginView(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::LoginView)
@@ -9,13 +8,13 @@ LoginView::LoginView(QWidget *parent) :
     ui->setupUi(this);
     this->setWindowFlags(Qt::FramelessWindowHint);
     connect(YF::self(),SIGNAL(replyjsonobject(QJsonObject)),this,SLOT(readreply(QJsonObject)));
+    connect(ui->quitebtn,SIGNAL(clicked()),qApp,SLOT(quit()));
     ui->loginname_editer->setFocus();
 }
 LoginView::~LoginView()
 {
     delete ui;
 }
-
 void LoginView::on_quitebtn_clicked()
 {
     qApp->quit();
@@ -33,7 +32,6 @@ void LoginView::on_loginbtn_clicked()
         YF::websiteurl="http://"+YF::websiteurl;
     }
     YF::self()->post("validateLogin",json);
-
 }
 
 void LoginView::readreply(QJsonObject json)
@@ -51,10 +49,12 @@ void LoginView::readreply(QJsonObject json)
 
 void LoginView::mousePressEvent(QMouseEvent *event)
 {
+
     if (event->button() == Qt::LeftButton) {
             move_point = event->globalPos() - frameGeometry().topLeft();
-            event->accept();
+
         }
+    event->accept();
 }
 
 void LoginView::mouseMoveEvent(QMouseEvent *event)

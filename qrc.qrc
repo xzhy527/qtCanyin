@@ -2,4 +2,10 @@
     <qresource prefix="/">
         <file>logon.jpg</file>
     </qresource>
+    <qresource prefix="/css">
+        <file>qcss.qss</file>
+    </qresource>
+    <qresource prefix="/images">
+        <file>close.png</file>
+    </qresource>
 </RCC>
