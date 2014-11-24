@@ -14,15 +14,16 @@ int main(int argc, char *argv[])
     }
 
 
-//    LoginView lview;
-//    MainWindow *w;
-//    if(lview.exec()==QDialog::Accepted){
-//        //lview.deleteLater();
-//        w=new MainWindow();
-//        w->show();
-//    }
-    YFWindow window;
-    window.show();
-    //qDebug()<<"123456";
+    LoginView lview;
+    MainWindow *w;
+    if(lview.exec()==QDialog::Accepted){
+        //lview.deleteLater();
+        w=new MainWindow();
+        w->show();
+    }
+//    YFWindow window;
+//    window.headwidget->setHeadHeight(30);
+//    window.headwidget->SetHeadTitle("qq聊天界面");
+//    window.show();
     return a.exec();
 }

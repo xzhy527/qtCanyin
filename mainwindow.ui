@@ -88,10 +88,10 @@
     <widget class="QPushButton" name="refreshbtn">
      <property name="geometry">
       <rect>
-       <x>630</x>
-       <y>2</y>
+       <x>636</x>
+       <y>0</y>
        <width>75</width>
-       <height>30</height>
+       <height>34</height>
       </rect>
      </property>
      <property name="sizePolicy">
@@ -110,10 +110,10 @@
     <widget class="QComboBox" name="comboBox">
      <property name="geometry">
       <rect>
-       <x>708</x>
-       <y>2</y>
+       <x>712</x>
+       <y>4</y>
        <width>57</width>
-       <height>31</height>
+       <height>24</height>
       </rect>
      </property>
      <property name="font">
@@ -125,6 +125,9 @@
      </property>
      <property name="autoFillBackground">
       <bool>true</bool>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">border-color: rgb(255, 255, 255);</string>
      </property>
      <property name="sizeAdjustPolicy">
       <enum>QComboBox::AdjustToMinimumContentsLength</enum>

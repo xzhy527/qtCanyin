@@ -8,7 +8,7 @@
 #include <QIcon>
 #include <QPushButton>
 #include <QMouseEvent>
-class Titlewidget;
+class HeadWidget;
 class YFWindow;
 
 class YFWindow : public QFrame
@@ -26,41 +26,42 @@ public:
         eRightBottom=13,
     };
     explicit YFWindow(QWidget *parent = 0);
-    Titlewidget *headwidget;
+    HeadWidget *headwidget;
     QWidget *centralWidget;
     QVBoxLayout *layout;
-    void SetCursorStyle(int direction);
+    void setrejectSizeChange(bool noChange=false);
+    void setrejectMove(bool nomove=false);
 signals:
-
+    void switchmaxwin();
 public slots:
-
-
-    // QWidget interface
+    void handlemaxwin();
 protected:
     virtual void mousePressEvent(QMouseEvent *);
     virtual void mouseMoveEvent(QMouseEvent *);
     virtual void mouseReleaseEvent(QMouseEvent *);
     virtual void mouseDoubleClickEvent(QMouseEvent *);
     virtual void resizeEvent(QResizeEvent *);
+    void SetCursorStyle(int direction);
+    //virtual void paintEvent(QPaintEvent *);
 private:
     QPoint m_oldpos;
     int changetype;
-
-
 };
-class Titlewidget:public QWidget{
+class HeadWidget:public QWidget{
     Q_OBJECT
 public:
-    explicit Titlewidget(QWidget *parent);
+    explicit HeadWidget(QWidget *parent);
+    QLabel *iconLabel;
     QLabel *titlelabel;
     QPushButton *closebtn;
     QPushButton *minbtn;
     QPushButton *maxbtn;
     QWidget *other;
-
-    // QWidget interface
+    void setHeadHeight(int height);
+    void SetHeadTitle(QByteArray title);
+    void setHeadIcon(char *fileName);
 protected:
-    virtual void resizeEvent(QResizeEvent *);
+   // virtual void resizeEvent(QResizeEvent *);
 };
 
 #endif // YFWINDOW_H

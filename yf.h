@@ -13,6 +13,7 @@
 #include <QJsonParseError>
 #include <QStandardItemModel>
 #include <QHeaderView>
+#include <QPalette>
 class YF : public QApplication
 {
     Q_OBJECT
@@ -26,6 +27,7 @@ public:
 
     static void post(QString url,const QByteArray & data="");
     static void post(QString url,QJsonObject json);
+    static QByteArray get(QString url);
 signals:
     void replyjsondocument(QJsonDocument);
     void replyjsonobject(QJsonObject);
@@ -33,7 +35,6 @@ signals:
 public slots:
     void networkfinished(QNetworkReply*);
 private:
-
     QJsonDocument *jsondocument;
 };
 //一封测试

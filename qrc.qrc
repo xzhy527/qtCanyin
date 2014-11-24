@@ -1,11 +1,11 @@
 <RCC>
-    <qresource prefix="/">
-        <file>logon.jpg</file>
-    </qresource>
+    <qresource prefix="/"/>
     <qresource prefix="/css">
         <file>qcss.qss</file>
     </qresource>
     <qresource prefix="/images">
         <file>close.png</file>
+        <file>checked.png</file>
+        <file alias="checked2.png">check2.png</file>
     </qresource>
 </RCC>

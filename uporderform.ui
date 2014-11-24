@@ -126,9 +126,9 @@
    <widget class="QLabel" name="label_6">
     <property name="geometry">
      <rect>
-      <x>392</x>
+      <x>408</x>
       <y>4</y>
-      <width>81</width>
+      <width>70</width>
       <height>21</height>
      </rect>
     </property>
@@ -148,7 +148,7 @@
      <rect>
       <x>274</x>
       <y>2</y>
-      <width>113</width>
+      <width>132</width>
       <height>25</height>
      </rect>
     </property>
@@ -156,9 +156,9 @@
    <widget class="QLineEdit" name="lineEdit_3">
     <property name="geometry">
      <rect>
-      <x>464</x>
+      <x>480</x>
       <y>2</y>
-      <width>113</width>
+      <width>100</width>
       <height>26</height>
      </rect>
     </property>

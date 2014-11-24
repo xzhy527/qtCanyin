@@ -1,20 +1,51 @@
 #include "yfwindow.h"
 #include <QDebug>
+#include <QBitmap>
+#include <QPainter>
+#include <QApplication>
+#include <QDesktopWidget>
 YFWindow::YFWindow(QWidget *parent) :QFrame(parent,Qt::FramelessWindowHint)
 {
+    this->setObjectName("YFWindow");
     layout=new QVBoxLayout(this);
-    headwidget=new Titlewidget(this);
+    headwidget=new HeadWidget(this);
     centralWidget=new QWidget();
-    layout->addWidget(headwidget);
-    layout->addWidget(centralWidget);
+    layout->addWidget(headwidget,0);
+    layout->addWidget(centralWidget,1);
     layout->setSpacing(0);
     layout->setContentsMargins(0,0,0,0);
     this->setLayout(layout);
     this->resize(500,500);
-    headwidget->titlelabel->resize(this->width(),headwidget->height());
-
+    connect(this,SIGNAL(switchmaxwin()),this,SLOT(handlemaxwin()));
+    connect(headwidget->minbtn,SIGNAL(clicked()),this,SLOT(showMinimized()));
+    connect(headwidget->maxbtn,SIGNAL(clicked()),this,SLOT(handlemaxwin()));
+    //headwidget->setVisible(false);
 }
 
+void YFWindow::setrejectSizeChange(bool noChange)
+{
+    this->setProperty("rejectSizeChange",noChange);
+}
+
+void YFWindow::setrejectMove(bool nomove)
+{
+    this->setProperty("rejectmove",nomove);
+}
+void YFWindow::handlemaxwin()
+{
+    //qDebug()<<this->property("maxwin")<<this->property("oldrect");
+    bool maxwin=this->property("maxwin").toBool();
+    if(!maxwin){
+        this->setProperty("oldrect",geometry());
+        //this->setGeometry(qApp->desktop()->availableGeometry());
+        this->setWindowState(Qt::WindowMaximized);
+    }else{
+        this->setWindowState(Qt::WindowNoState);
+        QRect rect=this->property("oldrect").toRect();
+        setGeometry(rect);
+    }
+    this->setProperty("maxwin",!maxwin);
+}
 void YFWindow::SetCursorStyle(int direction)
 {
     switch(direction)
@@ -38,9 +69,8 @@ void YFWindow::SetCursorStyle(int direction)
         default:
             setCursor(Qt::ArrowCursor);
             break;
-        }
+    }
 }
-
 void YFWindow::mousePressEvent(QMouseEvent *event)
 {
     if(event->button()==Qt::LeftButton){
@@ -60,14 +90,17 @@ void YFWindow::mousePressEvent(QMouseEvent *event)
         changetype=sh+sv;
         if(changetype>0){
           m_oldpos=event->globalPos();
-        }else{
+          if(this->property("rejectSizeChange").toBool()){
+             changetype=0;
+          }
+        }
+        if(changetype==0){
            m_oldpos=event->globalPos()-frameGeometry().topLeft();
         }
         SetCursorStyle(changetype);
     }
     event->ignore();
 }
-
 void YFWindow::mouseMoveEvent(QMouseEvent *event)
 {
     if (event->buttons() & Qt::LeftButton) {
@@ -92,56 +125,81 @@ void YFWindow::mouseMoveEvent(QMouseEvent *event)
             event->accept();
 
         }else{
-            move(event->globalPos() - m_oldpos);
+            if(!this->property("rejectmove").toBool()){
+               move(event->globalPos() - m_oldpos);
+            }
+
             event->accept();
         }
     }
 }
-
 void YFWindow::mouseReleaseEvent(QMouseEvent *)
 {
     changetype=0;
     SetCursorStyle(changetype);
 }
-
-void YFWindow::mouseDoubleClickEvent(QMouseEvent *)
+void YFWindow::mouseDoubleClickEvent(QMouseEvent *event)
 {
-    qDebug()<<headwidget->titlelabel->width();
-    headwidget->titlelabel->resize(this->width(),headwidget->height());
+    if(event->button()==Qt::LeftButton && event->y()<headwidget->titlelabel->height()){
+        emit switchmaxwin();
+    }
 }
 
 void YFWindow::resizeEvent(QResizeEvent *)
 {
     headwidget->titlelabel->resize(this->width(),headwidget->height());
 }
-
-
-Titlewidget::Titlewidget(QWidget *parent)
+HeadWidget::HeadWidget(QWidget *parent):QWidget(parent)
 {
+    this->setObjectName("headwidget");
     this->setWindowFlags(Qt::FramelessWindowHint);
-
-    titlelabel=new QLabel("你好的");
-    titlelabel->resize(this->width(),this->height());
+    this->setAutoFillBackground(true);
+    iconLabel=new QLabel();
+    iconLabel->resize(0,0);
+    iconLabel->setVisible(false);
+    titlelabel=new QLabel();
+    titlelabel->setAlignment(Qt::AlignTop|Qt::AlignLeft);
+    titlelabel->setGeometry(parent->geometry());
     closebtn=new QPushButton();
     closebtn->setIcon(QIcon(":/images/close.png"));
-    closebtn->setObjectName("headclosebtn");
-    connect(closebtn,SIGNAL(clicked()),parent,SLOT(close()));
+
     minbtn=new QPushButton();
+    minbtn->setVisible(false);
     maxbtn=new QPushButton();
+    maxbtn->setVisible(true);
     other=new QWidget();
-    //titlelabel->setStyleSheet("color:black;");
-    QHBoxLayout *titlelayout=new QHBoxLayout();
-    titlelayout->addWidget(titlelabel);
-    titlelayout->addStretch();
-    titlelayout->addWidget(closebtn);
+    other->setVisible(false);
+    QHBoxLayout *titlelayout=new QHBoxLayout(this);
+    titlelayout->addWidget(iconLabel,0,Qt::AlignCenter);
+    titlelayout->addWidget(titlelabel,1);
+    titlelayout->addWidget(other,0,Qt::AlignTop);
+    titlelayout->addWidget(minbtn,0,Qt::AlignTop);
+    titlelayout->addWidget(maxbtn,0,Qt::AlignTop);
+    titlelayout->addWidget(closebtn,0,Qt::AlignTop);
     titlelayout->setMargin(0);
     titlelayout->setSpacing(0);
     titlelayout->setContentsMargins(0,0,0,0);
     this->setLayout(titlelayout);
-    this->resize(this->width(),30);
+    this->setMaximumHeight(30);
+    this->setMinimumHeight(30);
+    connect(closebtn,SIGNAL(clicked()),parent,SLOT(close()));
+}
+void HeadWidget::setHeadHeight(int height)
+{
+    this->setMaximumHeight(height);
+    this->setMinimumHeight(height);
 }
 
-void Titlewidget::resizeEvent(QResizeEvent *)
+void HeadWidget::SetHeadTitle(QByteArray title)
 {
-    this->resize(this->width(),30);
+    titlelabel->setText(title);
+}
+
+void HeadWidget::setHeadIcon(char *fileName)
+{
+    QImage *img=new QImage(fileName);
+    img->load(fileName);
+    *img=img->scaled(this->height(),this->height(),Qt::IgnoreAspectRatio);
+    iconLabel->setPixmap(QPixmap::fromImage(*img));
+    iconLabel->setVisible(true);
 }

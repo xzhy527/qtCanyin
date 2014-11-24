@@ -47,6 +47,15 @@ void YF::post(QString url, QJsonObject json)
       YF::self()->post(url,data);
 }
 
+QByteArray YF::get(QString url)
+{
+    QNetworkRequest request(url);
+    QNetworkReply *re_t=YF::self()->networkaccess->get(request);
+    QByteArray bytes=re_t->readAll();
+    re_t->deleteLater();
+    return bytes;
+}
+
 void YF::networkfinished(QNetworkReply *re_t)
 {
     QJsonParseError json_error;

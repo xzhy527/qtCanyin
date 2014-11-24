@@ -29,6 +29,10 @@ protected:
    virtual void mousePressEvent(QMouseEvent *event);
    virtual void mouseMoveEvent(QMouseEvent *event);
 
+
+    // QWidget interface
+protected:
+    virtual void paintEvent(QPaintEvent *);
 };
 
 #endif // LOGINVIEW_H

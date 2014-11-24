@@ -1,10 +1,44 @@
-QLabel{
-    color:black;
-    background:black;
+QFrame#YFWindow{
+    border-radius:10px;
 
 }
-QPushButton{
-    broder:1px;
-    color:black;
-    background:black;
-｝
+
+QWidget#headwidget QLabel{
+     background-color:rgba(0,200,255,50%);
+     padding-left:2xp;
+     padding-top:1px;
+     Font-Size:20px;
+     Font-Style:normal;
+     Font-Weight:bold;
+     color:white;
+}
+QWidget#headwidget QPushButton{
+    border-width:1px;
+    border-style:solid;
+    border-color:white;
+    border-radius:1px;
+    width:20px;
+    height:20px;
+    margin-top:3px;
+    margin-right:3px;
+}
+QWidget#MainWindow QLabel{
+    color:white;
+}
+QWidget#MainWindow QPushButton{
+    border-width:2px;
+    border-style:solid;
+    border-color:white;
+    border-radius:4px;
+    color:white;
+    background-color:rgba(66,90,82,5%);
+}
+QWidget#MainWindow QPushButton:pressed{
+    border-width:2px;
+    border-style:solid;
+    border-color:white;
+    border-radius:4px;
+    color:white;
+    background-color:black;
+}
+

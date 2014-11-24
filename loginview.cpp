@@ -1,15 +1,17 @@
 #include "loginview.h"
 #include "ui_loginview.h"
 #include <QDebug>
-LoginView::LoginView(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::LoginView)
+#include <QPainter>
+#include <QBitmap>
+LoginView::LoginView(QWidget *parent) :QDialog(parent),ui(new Ui::LoginView)
 {
     ui->setupUi(this);
     this->setWindowFlags(Qt::FramelessWindowHint);
     connect(YF::self(),SIGNAL(replyjsonobject(QJsonObject)),this,SLOT(readreply(QJsonObject)));
     connect(ui->quitebtn,SIGNAL(clicked()),qApp,SLOT(quit()));
     ui->loginname_editer->setFocus();
+    this->setObjectName("loginview");
+    ui->loginbtn->setAttribute(Qt::WA_TranslucentBackground,true);
 }
 LoginView::~LoginView()
 {
@@ -62,5 +64,15 @@ void LoginView::mouseMoveEvent(QMouseEvent *event)
     if (event->buttons() & Qt::LeftButton) {
          move(event->globalPos() - move_point);
          event->accept();
-     }
+    }
+}
+void LoginView::paintEvent(QPaintEvent *)
+{
+    QBitmap bmp(this->size());
+    bmp.fill();
+    QPainter p(&bmp);
+    p.setBrush(Qt::color1);
+    p.setRenderHint(QPainter::Antialiasing);    //抗锯齿
+    p.drawRoundedRect(bmp.rect(), 10, 10); //四个角都是圆弧
+    setMask(bmp);
 }
