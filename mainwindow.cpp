@@ -135,8 +135,6 @@ void MainWindow::replyjsonArray(QJsonArray jsonlist)
 
 void MainWindow::on_refreshbtn_clicked()
 {
-   232323232
-
     YF::post("queryDishes");
 }
 
