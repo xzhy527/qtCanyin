@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -135,6 +135,8 @@ void MainWindow::replyjsonArray(QJsonArray jsonlist)
 
 void MainWindow::on_refreshbtn_clicked()
 {
+   232323232
+
     YF::post("queryDishes");
 }
 
