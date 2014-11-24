@@ -135,6 +135,9 @@ void MainWindow::replyjsonArray(QJsonArray jsonlist)
 
 void MainWindow::on_refreshbtn_clicked()
 {
+
+    helloworld
+
     YF::post("queryDishes");
 }
 
