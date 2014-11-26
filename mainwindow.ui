@@ -11,10 +11,10 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>MainWindow</string>
+   <string>智能餐饮管理系统</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QLabel" name="label">
+   <widget class="QLabel" name="toptiplabel">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -27,7 +27,7 @@
      <enum>QFrame::Box</enum>
     </property>
     <property name="text">
-     <string>TextLabel</string>
+     <string>欢迎使用本系统</string>
     </property>
    </widget>
    <widget class="QTableView" name="tableView">
@@ -39,8 +39,14 @@
       <height>708</height>
      </rect>
     </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Plain</enum>
+    </property>
    </widget>
-   <widget class="QFrame" name="frame">
+   <widget class="QFrame" name="funframe">
     <property name="geometry">
      <rect>
       <x>0</x>
@@ -101,7 +107,7 @@
       </sizepolicy>
      </property>
      <property name="text">
-      <string>刷新</string>
+      <string>刷新同步</string>
      </property>
      <property name="autoExclusive">
       <bool>false</bool>
@@ -111,9 +117,9 @@
      <property name="geometry">
       <rect>
        <x>712</x>
-       <y>4</y>
+       <y>0</y>
        <width>57</width>
-       <height>24</height>
+       <height>34</height>
       </rect>
      </property>
      <property name="font">
@@ -165,7 +171,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton">
+   <widget class="QPushButton" name="settlebtn">
     <property name="geometry">
      <rect>
       <x>772</x>
@@ -188,7 +194,7 @@
      <string>结算打印</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_2">
+   <widget class="QPushButton" name="createbtn">
     <property name="geometry">
      <rect>
       <x>772</x>
@@ -211,7 +217,7 @@
      <string>新增流水单</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_3">
+   <widget class="QPushButton" name="querybtn">
     <property name="geometry">
      <rect>
       <x>772</x>
@@ -234,7 +240,7 @@
      <string>最近流水单查询</string>
     </property>
    </widget>
-   <widget class="QPushButton" name="pushButton_4">
+   <widget class="QPushButton" name="settingbtn">
     <property name="geometry">
      <rect>
       <x>772</x>
@@ -257,7 +263,7 @@
      <string>功能与设置</string>
     </property>
    </widget>
-   <widget class="QLabel" name="label_5">
+   <widget class="QLabel" name="orderIDlabel">
     <property name="geometry">
      <rect>
       <x>772</x>

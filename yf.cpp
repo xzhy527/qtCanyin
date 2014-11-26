@@ -1,4 +1,7 @@
 #include "yf.h"
+#include <QSplashScreen>
+#include <QLabel>
+#include <QThread>
 QNetworkAccessManager* YF::networkaccess=0;
 QString YF::websiteurl="";
 YF::YF(int &argc, char **argv):QApplication(argc,argv)
@@ -18,6 +21,18 @@ YF::~YF()
 YF *YF::self()
 {
     return (static_cast<YF*>(QCoreApplication::instance()));
+}
+
+void YF::setsetting(QString key, QVariant value,QString filename)
+{
+    QSettings config(filename,QSettings::IniFormat);
+    config.setValue(key,value);
+}
+
+QVariant YF::getsettingvalue(QString key,QString filename)
+{
+   QSettings config(filename,QSettings::IniFormat);
+   return config.value(key);
 }
 
 void YF::post(QString urltext, const QByteArray &data)
@@ -47,17 +62,57 @@ void YF::post(QString url, QJsonObject json)
       YF::self()->post(url,data);
 }
 
-QByteArray YF::get(QString url)
+QByteArray YF::get(QString url,bool async)
 {
+    QByteArray bytes;
     QNetworkRequest request(url);
-    QNetworkReply *re_t=YF::self()->networkaccess->get(request);
-    QByteArray bytes=re_t->readAll();
-    re_t->deleteLater();
+    if(!async){
+      YF::self()->syncreply=YF::self()->networkaccess->get(request);
+      QEventLoop eventLoop;
+      connect(YF::self()->syncreply,SIGNAL(finished()),&eventLoop,SLOT(quit()));
+     // connect(YF::self()->networkaccess,SIGNAL(finished(QNetworkReply*)),&eventLoop,SLOT(quit()));
+      eventLoop.exec();
+      bytes=YF::self()->syncreply->readAll();
+      YF::self()->syncreply->deleteLater();
+    }else{
+       YF::self()->networkaccess->get(request);
+    }
     return bytes;
 }
 
+void YF::popErrorMessage(QWidget* parent, QString messagetext)
+{
+    QLabel *errorlabel=new QLabel();
+    errorlabel->setObjectName("popErrorMessage");
+    errorlabel->setWindowFlags(Qt::Popup|Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint);
+    if(parent!=NULL){
+        QRect rect(parent->x()+parent->width()/2-100,parent->y()+parent->height()/2-25,200,50);
+        errorlabel->setGeometry(rect);
+    }
+    errorlabel->activateWindow();
+    errorlabel->setText(messagetext);
+    errorlabel->setAlignment(Qt::AlignCenter);
+    errorlabel->show();
+    for (int var = 100; var>=0; --var) {
+        errorlabel->setWindowOpacity(var*0.01);
+        if(var>80){
+           QThread::msleep(50);
+        }
+        QThread::msleep(20);
+        processEvents();
+    }
+    errorlabel->deleteLater();
+}
 void YF::networkfinished(QNetworkReply *re_t)
 {
+    if(YF::self()->syncreply==re_t)return;
+    QNetworkReply::NetworkError networkreplyerror=re_t->error();
+    if(networkreplyerror!=0){
+        //取活动的窗口界面
+        QWidget *curr_widget=activeWindow();
+        YF::popErrorMessage(curr_widget,"网络连接出现错误");
+        return;
+    }
     QJsonParseError json_error;
     QJsonDocument jsondocument=QJsonDocument::fromJson(re_t->readAll(),&json_error);
 
@@ -71,4 +126,6 @@ void YF::networkfinished(QNetworkReply *re_t)
         emit this->replyjsondocument(jsondocument);
 
     }
+    re_t->close();
+    re_t->deleteLater();
 }

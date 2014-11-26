@@ -1,6 +1,5 @@
 #ifndef DISHESSCALE_H
 #define DISHESSCALE_H
-
 #include <QItemDelegate>
 #include <QLabel>
 #include <QPainter>

@@ -11,7 +11,8 @@ LoginView::LoginView(QWidget *parent) :QDialog(parent),ui(new Ui::LoginView)
     connect(ui->quitebtn,SIGNAL(clicked()),qApp,SLOT(quit()));
     ui->loginname_editer->setFocus();
     this->setObjectName("loginview");
-    ui->loginbtn->setAttribute(Qt::WA_TranslucentBackground,true);
+    ui->loginname_editer->setText(YF::getsettingvalue("login/loginname").toString());
+    ui->weburlediter->setText(YF::getsettingvalue("host/hostaddress").toString());
 }
 LoginView::~LoginView()
 {
@@ -21,7 +22,6 @@ void LoginView::on_quitebtn_clicked()
 {
     qApp->quit();
 }
-
 void LoginView::on_loginbtn_clicked()
 {
     if(ui->loginname_editer->text().length()<1||ui->password_editer->text().length()<1)
@@ -35,15 +35,19 @@ void LoginView::on_loginbtn_clicked()
     }
     YF::self()->post("validateLogin",json);
 }
-
 void LoginView::readreply(QJsonObject json)
 {
 
     if(json.take("statusCode").toString().toInt()<=0){
        QString message=json.take("message").toString();
-       ui->loginmessage->setText(message);
+       YF::popErrorMessage(this,message);
+//       YF::popErrorMessage(this,message);
+
+      //ui->loginmessage->setText(message);
     }else{
         qDebug()<<json.take("statusCode").toString().toInt();
+        YF::setsetting("host/hostaddress",ui->weburlediter->text());
+        YF::setsetting("login/loginname",ui->loginname_editer->text());
         this->accept();
     }
 
@@ -53,9 +57,8 @@ void LoginView::mousePressEvent(QMouseEvent *event)
 {
 
     if (event->button() == Qt::LeftButton) {
-            move_point = event->globalPos() - frameGeometry().topLeft();
-
-        }
+       move_point = event->globalPos() - frameGeometry().topLeft();
+    }
     event->accept();
 }
 

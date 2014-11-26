@@ -25,9 +25,10 @@ HEADERS  += mainwindow.h \
 
 FORMS    += mainwindow.ui \
     loginview.ui \
-    uporderform.ui
+    uporderform.ui \
+    test.ui
 
 RESOURCES += \
     qrc.qrc
-
+RC_FILE = icon.rc
 include(YF/YF.pri)

@@ -90,14 +90,14 @@ public:
         label_5->setFont(font);
         label_6 = new QLabel(frame_2);
         label_6->setObjectName(QStringLiteral("label_6"));
-        label_6->setGeometry(QRect(392, 4, 81, 21));
+        label_6->setGeometry(QRect(408, 4, 70, 21));
         label_6->setFont(font);
         lineEdit_2 = new QLineEdit(frame_2);
         lineEdit_2->setObjectName(QStringLiteral("lineEdit_2"));
-        lineEdit_2->setGeometry(QRect(274, 2, 113, 25));
+        lineEdit_2->setGeometry(QRect(274, 2, 132, 25));
         lineEdit_3 = new QLineEdit(frame_2);
         lineEdit_3->setObjectName(QStringLiteral("lineEdit_3"));
-        lineEdit_3->setGeometry(QRect(464, 2, 113, 26));
+        lineEdit_3->setGeometry(QRect(480, 2, 100, 26));
         lineEdit_4 = new QLineEdit(frame_2);
         lineEdit_4->setObjectName(QStringLiteral("lineEdit_4"));
         lineEdit_4->setGeometry(QRect(72, 2, 132, 26));

@@ -85,12 +85,14 @@ public:
         loginbtn = new QPushButton(LoginView);
         loginbtn->setObjectName(QStringLiteral("loginbtn"));
         loginbtn->setGeometry(QRect(298, 138, 125, 37));
+        loginbtn->setCheckable(true);
+        loginbtn->setChecked(true);
         quitebtn = new QPushButton(LoginView);
         quitebtn->setObjectName(QStringLiteral("quitebtn"));
         quitebtn->setGeometry(QRect(442, 138, 125, 37));
         loginmessage = new QLabel(LoginView);
         loginmessage->setObjectName(QStringLiteral("loginmessage"));
-        loginmessage->setGeometry(QRect(298, 178, 271, 16));
+        loginmessage->setGeometry(QRect(272, 178, 305, 16));
         loginmessage->setAlignment(Qt::AlignCenter);
 
         retranslateUi(LoginView);
@@ -106,9 +108,9 @@ public:
         label_3->setText(QApplication::translate("LoginView", "\346\234\215\345\212\241\345\231\250", 0));
         label_4->setText(QApplication::translate("LoginView", "\347\224\250\346\210\267\345\220\215", 0));
         label_5->setText(QApplication::translate("LoginView", "\345\257\206  \347\240\201", 0));
-        weburlediter->setText(QApplication::translate("LoginView", "127.0.0.1", 0));
-        loginname_editer->setText(QApplication::translate("LoginView", "admin", 0));
-        password_editer->setText(QApplication::translate("LoginView", "admin", 0));
+        weburlediter->setText(QString());
+        loginname_editer->setText(QString());
+        password_editer->setText(QString());
         loginbtn->setText(QApplication::translate("LoginView", "\347\231\273\345\275\225", 0));
         quitebtn->setText(QApplication::translate("LoginView", "\351\200\200\345\207\272", 0));
         loginmessage->setText(QString());

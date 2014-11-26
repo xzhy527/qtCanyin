@@ -41,4 +41,18 @@ QWidget#MainWindow QPushButton:pressed{
     color:white;
     background-color:black;
 }
-
+QLabel#popErrorMessage{
+    border-width:2px;
+    border-style:solid;
+    border-color:white;
+    border-radius:4px;
+    color:white;
+    font-size:18px;
+    font-weight:bold;
+    background-color:rgba(66,90,82,5%);
+}
+QFrame#funframe{
+    border-width:2px;
+    border-style:solid;
+    border-color:white;
+}
