@@ -11,8 +11,8 @@ LoginView::LoginView(QWidget *parent) :QDialog(parent),ui(new Ui::LoginView)
     connect(ui->quitebtn,SIGNAL(clicked()),qApp,SLOT(quit()));
     ui->loginname_editer->setFocus();
     this->setObjectName("loginview");
-    ui->loginname_editer->setText(YF::getsettingvalue("login/loginname").toString());
-    ui->weburlediter->setText(YF::getsettingvalue("host/hostaddress").toString());
+    ui->loginname_editer->setText(YF::settingvalue("login/loginname").toString());
+    ui->weburlediter->setText(YF::settingvalue("host/hostaddress").toString());
 }
 LoginView::~LoginView()
 {

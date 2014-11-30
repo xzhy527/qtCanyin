@@ -3,6 +3,7 @@
 #include <QStyledItemDelegate>
 #include <QFont>
 #include <QString>
+#include <QUrl>
 DishesScale::DishesScale(QObject *parent) :
     QItemDelegate(parent)
 {
@@ -36,7 +37,7 @@ void DishesScale::paint(QPainter *painter, const QStyleOptionViewItem &option, c
             font.setBold(true);
             font.setPixelSize(16);
             painter->setFont(font);
-            QString text=QString::number(jsonobj.value("bprice").toDouble()) + tr("元");
+            QString text=QString::number(jsonobj.value("bprice").toVariant().toDouble()) + tr("元");
             painter->drawText(rect.x(),rect.y()+30,rect.width(),25,Qt::AlignCenter,jsonobj.value("name").toString());
             painter->drawText(rect.x()+25,rect.y()+75,text);
 
@@ -45,7 +46,14 @@ void DishesScale::paint(QPainter *painter, const QStyleOptionViewItem &option, c
             //缩略图模式
             QBrush b;
             painter->setBrush(b);
-            painter->drawImage(rect,QImage(":/images/checked.png"));
+
+            if(!jsonobj.value("picaddr").toString().isEmpty()){
+               QString filepath=QUrl(jsonobj.value("picaddr").toString()).fileName();
+               painter->drawImage(rect,QImage("temp/images/"+filepath));
+            }else{
+                painter->drawImage(rect,QImage(":/images/checked.png"));
+            }
+
             painter->drawRoundRect(rect,4,4);
             b.setColor(Qt::red);
             b.setStyle(Qt::SolidPattern);

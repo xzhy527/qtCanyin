@@ -13,14 +13,16 @@ int main(int argc, char *argv[])
         qfile.close();
     }
 
-
+    YF::websiteurl="http://www.3blade.com/";
     LoginView lview;
     MainWindow *w;
-    if(lview.exec()==QDialog::Accepted){
-        //lview.deleteLater();
-        w=new MainWindow();
-        w->show();
-    }
+    w=new MainWindow();
+    w->show();
+//    if(lview.exec()==QDialog::Accepted){
+//        //lview.deleteLater();
+//        w=new MainWindow();
+//        w->show();
+//    }
 //    YFWindow window;
 //    window.headwidget->setHeadHeight(30);
 //    window.headwidget->SetHeadTitle("qq聊天界面");
