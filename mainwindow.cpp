@@ -33,6 +33,7 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent),ui(new Ui::MainWind
     connect(ui->lineEdit,SIGNAL(textEdited(QString)),this,SLOT(searchdishes(QString)));
     connect(ui->label,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(customContext(QPoint)));
     connect(ui->lineEdit,SIGNAL(editingFinished()),this,SLOT(searchfinished()));
+      connect(ui->orderIDCombobox,SIGNAL(activated(int)) ,this,SLOT(orderIDchange(int)));
     ui->lineEdit->installEventFilter(this);
     ui->label->setContextMenuPolicy(Qt::CustomContextMenu);
     //延时调用初始画面
@@ -87,7 +88,6 @@ void MainWindow::initview()
    ui->tableView->setItemDelegate(&disheimage);
    loadDishesLocalData();
    createtempsales();
-   connect(ui->orderIDCombobox,SIGNAL(currentIndexChanged(int)) ,this,SLOT(orderIDchange(int)));
    //设置联想词
    dishessearchModel=new QSqlQueryModel;
    ui->lineEdit->setCompleter(new QCompleter);
@@ -203,7 +203,7 @@ void MainWindow::loadDishesLocalData(QSqlQuery query, bool isapppend)
 /**
  * @brief 处理临存和上次的订单以及加载模板
  */
-void MainWindow::loadcacheorder()
+void MainWindow::loadcacheorder(QString orderid)
 {
     ui->orderIDCombobox->clear();
     orderindex=0;
@@ -224,9 +224,14 @@ void MainWindow::loadcacheorder()
         if(t_index>orderindex)orderindex=t_index;
         IDstr=QString::number(t_index)+"  "+IDstr.mid(6,2)+":"+IDstr.mid(8,2)+":"+IDstr.mid(10,2);
         ui->orderIDCombobox->insertItem(0,IDstr);
-        ui->orderIDCombobox->setItemData(0,query.value("sid"),Qt::DecorationRole);
-        ui->orderIDCombobox->setCurrentText(IDstr);
+        ui->orderIDCombobox->setItemData(0,query.value("sid"),Qt::DecorationRole);       
     }
+    if(!orderid.isEmpty()){
+        int t_index=ui->orderIDCombobox->findData(orderid,Qt::DecorationRole);
+        ui->orderIDCombobox->setCurrentIndex(t_index);
+        emit ui->orderIDCombobox->activated(t_index);
+    }
+
 }
 /**
  * @brief 寻找已点订单,如果没有找到或ID和Name都为空的数据返回-1,ID和name选其一
@@ -309,6 +314,7 @@ void MainWindow::decreasedishes(QJsonObject dishesobject,int num,bool autoupdate
 }
 void MainWindow::decreasedishes(int r_index,int num,bool autoupdatecheck){
     if(r_index<0)return;
+//    qDebug()<<"减少菜品数量"<<r_index;
     int id=orderModel->index(r_index,4).data().toInt();
     int count=0;
     //计算数量
@@ -364,13 +370,13 @@ void MainWindow::changedishedcheck(int id, int num)
  * @param changenum 改变量
  * @return 无返回值
  */
-void MainWindow::changedishedcheck(QModelIndex index, int changenum)
+void MainWindow::changedishedcheck(QModelIndex index, int num)
 {
+
     if(viewtype==scaleview||viewtype==wordbutton){
         QJsonObject jsonobj=index.data().toJsonObject();
-        int newchecknum=jsonobj.value("checkednum").toInt()+changenum;
-        if(newchecknum>0){
-            jsonobj.insert("checkednum",newchecknum);
+        if(num>0){
+            jsonobj.insert("checkednum",num);
             jsonobj.insert("selected",true);
         }else{
             jsonobj.insert("checkednum",0);
@@ -379,9 +385,8 @@ void MainWindow::changedishedcheck(QModelIndex index, int changenum)
         dishesModel->setData(index,jsonobj);
     }else{
         int rowindex=index.row();
-        int newchecknum=dishesModel->index(rowindex,5).data().toInt()+changenum;
-        if(newchecknum>0){
-            dishesModel->setData(dishesModel->index(rowindex,5),newchecknum);
+        if(num>0){
+            dishesModel->setData(dishesModel->index(rowindex,5),num);
         }else{
             dishesModel->setData(dishesModel->index(rowindex,5),0);
         }
@@ -490,9 +495,9 @@ void MainWindow::replyjsonArray(QJsonArray jsonlist)
         jsonobj.insert("table","t_dishes");
         QString t_pym=YF_getSpell(jsonobj.value("name").toVariant().toString());
         jsonobj.insert("genpy",t_pym);
-
         YF::sql(jsonobj);
     }
+
     ui->refreshbtn->setText("更新同步");
     ui->refreshbtn->setEnabled(true);
     ui->toptiplabel->setText(tr("菜单数据下载完成!!!"));
@@ -741,11 +746,9 @@ void MainWindow::on_pushButton_clicked()
 
 void MainWindow::searchdishes(QString text)
 {
-    qDebug()<<text;
     if(text.isEmpty())return;
     QString sqltext;
     QByteArray bytes=text.left(1).toLocal8Bit();
-    qDebug()<<bytes.count();
     if(bytes.count()<2){
         QChar qch(bytes.at(0));
         if(qch.isNumber()){
@@ -820,7 +823,7 @@ void MainWindow::customContext(QPoint )
         }
         ordermenu->exec(lablelglobalpoint);
         if(returmenu!=0){
-          returmenu->deleteLater();
+            returmenu->deleteLater();
         }
         if(movemenu!=0){
             movemenu->deleteLater();
@@ -859,7 +862,7 @@ QModelIndex MainWindow::finddishes(QString propertyname, QVariant value)
         for(t_r=0;t_r<dishesModel->rowCount();t_r++){
             for(t_c=0;t_c<dishesModel->columnCount();t_c++){
                  QJsonObject jsonobj=dishesModel->index(t_r,t_c).data().toJsonObject();
-                 qDebug()<<t_r<<t_c<<jsonobj;
+                // qDebug()<<t_r<<t_c<<jsonobj;
                  if(jsonobj.value(propertyname).toVariant()==value){
                      return dishesModel->index(t_r,t_c);
                  }
@@ -891,15 +894,9 @@ void MainWindow::actionhandle()
         createtempsales();
         QString newsid=ui->orderIDCombobox->currentData(Qt::DecorationRole).toString();
         query.exec("insert into t_order(mz,dj,sl,je,did,cd,sw,sid)select mz,dj,sl,je,did,'"+YF_getdatetime()+"','normal','"+newsid+"'"+" from t_order where sid='"+sid+"'");
-        qDebug()<<"insert into t_order(mz,dj,sl,je,did,cd,sw,sid)select mz,dj,sl,je,did,'"+YF_getdatetime()+"','normal','"+newsid+"'"+" from t_order where sid='"+sid+"'";
-        loadcacheorder();
-        int ordercomboxindex=ui->orderIDCombobox->currentIndex();
-        qDebug()<<ordercomboxindex<<ui->orderIDCombobox->count()<<ui->orderIDCombobox->currentText()<<ui->orderIDCombobox->size();
-        emit ui->orderIDCombobox->activated(ordercomboxindex);
-        return;
+        loadcacheorder(newsid);
     }else{
         if(t_action->objectName()=="join"){
-            qDebug()<<t_action;
             if(t_action->data()==ui->orderIDCombobox->currentData(Qt::DecorationRole))return;
             QString newsid=t_action->data().toString();
             QString sqltext="update t_order set sid=?,sw=? where sid=?";
@@ -908,6 +905,7 @@ void MainWindow::actionhandle()
             query.bindValue(1,"move:"+sid);
             query.bindValue(2,sid);
             query.exec();
+            loadcacheorder(newsid);
         }else if(t_action->objectName()=="split"){
             QString newid=t_action->data().toString();
             QString sqltext="update t_order set sid=?,sw=? where sid=? and sw=?";
@@ -917,9 +915,11 @@ void MainWindow::actionhandle()
             query.bindValue(2,sid);
             query.bindValue(3,"move:"+t_action->data().toString());
             query.exec();
+            loadcacheorder(sid);
         }
-        loadcacheorder();
+
     }
+
 
 }
 

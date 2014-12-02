@@ -38,7 +38,7 @@ private:
     void decreasedishes(QJsonObject QJsonObject,int num=1,bool autoupdatecheck=true);
     QJsonObject fetchDishesID(QModelIndex data=QModelIndex());
     void changedishedcheck(int id, int num);
-    void changedishedcheck(QModelIndex index,int changenum);
+    void changedishedcheck(QModelIndex index, int num);
     void switchViewtype(int newviewtype=2);
     void decreasedishes(int id, int num, bool autoupdatecheck);
     void insertNotification(QJsonObject json);
@@ -54,7 +54,7 @@ private slots:
     void orderIDchange(int index);
     void loadDishesLocalData(QString sqltext="", bool isapppend=false);
     void loadDishesLocalData(QSqlQuery query,bool isapppend=false);
-    void loadcacheorder();
+    void loadcacheorder(QString orderid="");
     void on_pushButton_clicked();
     void searchdishes(QString text);
     void customContext(QPoint);

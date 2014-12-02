@@ -131,7 +131,7 @@ bool YF::initdatabaseconnect()
 bool YF::sql(QVariant sqlvariant, QSqlQuery* r_query)
 {
     QSqlQuery query;
-    if(r_query!=0){query=*r_query;qDebug()<<""<<r_query;}
+    if(r_query!=0){query=*r_query;}
     if(sqlvariant.isNull())return false;
     if(sqlvariant.canConvert(QMetaType::QJsonObject)){
         QJsonObject json=sqlvariant.toJsonObject();
@@ -221,10 +221,7 @@ bool YF::sql(QVariant sqlvariant, QSqlQuery* r_query)
     }
     else if(sqlvariant.canConvert(QMetaType::QString)){
         bool re_t=query.exec(sqlvariant.toString());
-
         qDebug()<<"执行的语句:"<<query.executedQuery();
-        query.next();
-        qDebug()<<"执行的语句:"<<query.value(0);
         return re_t;
     }
     return false;

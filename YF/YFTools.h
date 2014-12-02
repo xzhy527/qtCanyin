@@ -22,16 +22,13 @@ QString YF_getSpell(QString src){
     {
         QString str = src.at(i);
         QByteArray arr = str.toLocal8Bit();
-//        if(arr.count()<2){
-//            strPinYin.append(str);
-//        }else{
-//            wchr = (arr.at(0) & 0xff) << 8;
-//            wchr |= (arr.at(1) & 0xff);
-//            strPinYin.append(convert(wchr));
-//        }
-        wchr = (arr.at(0) & 0xff) << 8;
-        wchr |= (arr.at(1) & 0xff);
-        strPinYin.append(convert(wchr));
+        if(arr.count()<2){
+            strPinYin.append(str);
+        }else{
+            wchr = (arr.at(0) & 0xff) << 8;
+            wchr |= (arr.at(1) & 0xff);
+            strPinYin.append(convert(wchr));
+        }
     }
     return strPinYin;
 }
@@ -44,7 +41,6 @@ bool In(wchar_t start, wchar_t end, wchar_t code){
 }
 char convert(int n)
 {
-    qDebug()<<n;
     if (In(0xB0A1,0xB0C4,n)) return 'a';
     if (In(0XB0C5,0XB2C0,n)) return 'b';
     if (In(0xB2C1,0xB4ED,n)) return 'c';
