@@ -8,8 +8,11 @@ void YF_alert(QString text)
 {
     QMessageBox::about(qApp->activeWindow(),"提示",text);
 }
-QString YF_getdatetime(){
-    return QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+QString YF_getdatetime(QDateTime datetime=QDateTime::currentDateTime(),int redays=0,int reseconds=0){
+    QDateTime t_datetime=datetime;
+    t_datetime=t_datetime.addDays(redays);
+    t_datetime=t_datetime.addSecs(reseconds);
+    return t_datetime.toString("yyyy-MM-dd hh:mm:ss");
 }
 
 QString YF_getSpell(QString src){

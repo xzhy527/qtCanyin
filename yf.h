@@ -36,7 +36,7 @@ public:
     static QNetworkAccessManager *networkaccess;
     static QString websiteurl;
     static void setsetting(QString key,QVariant value,QString filename="setting.config");
-    static QVariant settingvalue(QString key,QString filename="setting.config");
+    static QVariant settingvalue(QString key,QVariant defauit=QVariant(),QString filename="setting.config");
     static void post(QString url,const QByteArray & data="");
     static void post(QString url,QJsonObject json);
     static QByteArray get(QString url,bool async=true);

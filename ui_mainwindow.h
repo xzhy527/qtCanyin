@@ -45,6 +45,7 @@ public:
     QFrame *orderIDlabel;
     QLabel *label;
     QComboBox *orderIDCombobox;
+    QLabel *totallable;
 
     void setupUi(QMainWindow *MainWindow)
     {
@@ -106,7 +107,7 @@ public:
         pushButton->setGeometry(QRect(472, 0, 81, 31));
         tableView_2 = new QTableView(centralWidget);
         tableView_2->setObjectName(QStringLiteral("tableView_2"));
-        tableView_2->setGeometry(QRect(772, 176, 252, 544));
+        tableView_2->setGeometry(QRect(772, 176, 252, 511));
         settlebtn = new QPushButton(centralWidget);
         settlebtn->setObjectName(QStringLiteral("settlebtn"));
         settlebtn->setGeometry(QRect(772, 720, 252, 49));
@@ -168,6 +169,12 @@ public:
         orderIDCombobox->setDuplicatesEnabled(true);
         orderIDCombobox->setFrame(true);
         orderIDCombobox->setModelColumn(0);
+        totallable = new QLabel(centralWidget);
+        totallable->setObjectName(QStringLiteral("totallable"));
+        totallable->setGeometry(QRect(772, 688, 252, 31));
+        totallable->setFont(font1);
+        totallable->setFrameShape(QFrame::Box);
+        totallable->setFrameShadow(QFrame::Plain);
         MainWindow->setCentralWidget(centralWidget);
 #ifndef QT_NO_SHORTCUT
 #endif // QT_NO_SHORTCUT
@@ -200,6 +207,7 @@ public:
         settingbtn->setText(QApplication::translate("MainWindow", "\345\212\237\350\203\275\344\270\216\350\256\276\347\275\256", 0));
         label->setText(QApplication::translate("MainWindow", "\350\256\242\345\215\225\346\265\201\346\260\264\345\217\267", 0));
         orderIDCombobox->setCurrentText(QString());
+        totallable->setText(QApplication::translate("MainWindow", "\346\200\273\351\207\221\351\242\235:", 0));
     } // retranslateUi
 
 };

@@ -190,7 +190,7 @@
       <x>772</x>
       <y>176</y>
       <width>252</width>
-      <height>544</height>
+      <height>511</height>
      </rect>
     </property>
    </widget>
@@ -391,6 +391,32 @@
       <number>0</number>
      </property>
     </widget>
+   </widget>
+   <widget class="QLabel" name="totallable">
+    <property name="geometry">
+     <rect>
+      <x>772</x>
+      <y>688</y>
+      <width>252</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>12</pointsize>
+      <weight>75</weight>
+      <bold>true</bold>
+     </font>
+    </property>
+    <property name="frameShape">
+     <enum>QFrame::Box</enum>
+    </property>
+    <property name="frameShadow">
+     <enum>QFrame::Plain</enum>
+    </property>
+    <property name="text">
+     <string>总金额:</string>
+    </property>
    </widget>
   </widget>
  </widget>

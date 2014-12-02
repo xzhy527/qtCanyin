@@ -6,6 +6,8 @@
 #include <QDir>
 #include "YF/YFTools.h"
 #include <QCompleter>
+#include <QMenu>
+
 MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent),ui(new Ui::MainWindow)
 {
     this->setGeometry(-1300,0,500,500);
@@ -15,35 +17,33 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent),ui(new Ui::MainWind
     QColor color(66,90,82);
     this->setPalette(QPalette(color));
     ui->setupUi(this);
+    this->setVisible(true);
     //YF::post("queryDishes");
-    ui->toptiplabel->setText(tr("正在下载菜单数据........."));
+    ui->toptiplabel->setText(tr("正在初始化启动参数........."));
     if(!this->isMaximized())this->setWindowState(Qt::WindowMaximized);
     //多线程创建和定义
-    m_task=new YFTask;
+    m_task=new YFTask(ui);
     m_task->moveToThread(&m_thread);
     m_thread.start();
     //信号和槽连接<<network<<下载图片<<更新提示信息;
     connect(YF::self(),SIGNAL(replyjsonlist(QJsonArray)),this,SLOT(replyjsonArray(QJsonArray)));
     connect(this,SIGNAL(downloadimage(QUrl)),m_task,SLOT(httpdownload(QUrl)),Qt::QueuedConnection);
-    connect(this,SIGNAL(updatetoptipmessage(QString,int)),this,SLOT(showNotification(QString,int)));
-    connect(ui->createbtn,SIGNAL(clicked()),this,SLOT(createtempsales()));
-    connect(ui->orderIDCombobox,SIGNAL(activated(int)),this,SLOT(orderIDchange(int)));
+    connect(this,SIGNAL(updatetoptipmessage(QString,int)),m_task,SLOT(showNotification(QString,int)),Qt::QueuedConnection);
+    connect(ui->createbtn,SIGNAL(clicked()),this,SLOT(createtempsales()));    
     connect(ui->lineEdit,SIGNAL(textEdited(QString)),this,SLOT(searchdishes(QString)));
-
-
+    connect(ui->label,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(customContext(QPoint)));
+    connect(ui->lineEdit,SIGNAL(editingFinished()),this,SLOT(searchfinished()));
+    ui->lineEdit->installEventFilter(this);
+    ui->label->setContextMenuPolicy(Qt::CustomContextMenu);
     //延时调用初始画面
     QTimer::singleShot(100,this,SLOT(initview()));
 }
-
 MainWindow::~MainWindow()
 {
     delete ui;
     m_thread.quit();
     m_thread.wait();
-//    delete m_thread;
     m_task->deleteLater();
-
-
 }
 //初始化视图
 void MainWindow::initview()
@@ -59,13 +59,12 @@ void MainWindow::initview()
    ui->tableView_2->setModel(orderModel);
    ui->tableView->setObjectName("dishestableview");
    ui->tableView_2->setObjectName("ordertableview");
-   m_colmncount=8;
-   m_colmnwidth=110;
-   m_colmnheight=110;
-//  orderModel->setColumnCount(5);
-//  QStringList titlelabels;
-//  titlelabels<<"项目"<<"单价"<<"数量"<<"金额"<<"ID";
-//  orderModel->setHorizontalHeaderLabels(titlelabels);
+   if(YF::settingvalue("dishesmodel_RowHeight").toString().isEmpty())
+       YF::setsetting("dishesmodel_RowHeight",110);
+   if(YF::settingvalue("dishesmodel_columncount").toString().isEmpty())
+       YF::setsetting("dishesmodel_columncount",8);
+   if(YF::settingvalue("dishesmodel_Rowwidth").toString().isEmpty())
+       YF::setsetting("dishesmodel_Rowwidth",110);
    orderModel->setHeaderData(0,Qt::Horizontal,"项目");
    orderModel->setHeaderData(1,Qt::Horizontal,"单价");
    orderModel->setHeaderData(2,Qt::Horizontal,"数量");
@@ -88,9 +87,28 @@ void MainWindow::initview()
    ui->tableView->setItemDelegate(&disheimage);
    loadDishesLocalData();
    createtempsales();
+   connect(ui->orderIDCombobox,SIGNAL(currentIndexChanged(int)) ,this,SLOT(orderIDchange(int)));
+   //设置联想词
    dishessearchModel=new QSqlQueryModel;
    ui->lineEdit->setCompleter(new QCompleter);
    ui->lineEdit->completer()->setModel(dishessearchModel);
+   ui->lineEdit->completer()->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
+   QTableView *dispalysearchview=new QTableView;
+   dispalysearchview->horizontalHeader()->setHidden(true);
+   dispalysearchview->setModel(dishessearchModel);
+   dispalysearchview->resizeRowsToContents();
+   dispalysearchview->resizeColumnsToContents();
+   dispalysearchview->setMinimumHeight(150);
+   dispalysearchview->verticalHeader()->hide();
+   ui->lineEdit->completer()->setPopup(dispalysearchview);
+   //设置自定义菜单
+   ordermenu=new QMenu(ui->label);
+   deleteAction=new QAction(tr("删除此订单"),ordermenu);
+   copyAction=new QAction(tr("复制此订单"),ordermenu);
+   ordermenu->insertAction(0,deleteAction);
+   ordermenu->insertAction(0,copyAction);
+   connect(deleteAction,SIGNAL(triggered()),this,SLOT(actionhandle()));
+   connect(copyAction,SIGNAL(triggered()),this,SLOT(actionhandle()));
 }
 /**
  * @brief 创建临时消费订单
@@ -98,6 +116,7 @@ void MainWindow::initview()
 void MainWindow::createtempsales()
 {
     loadcacheorder();
+    orderindex++;
     QDateTime nowtime=QDateTime::currentDateTime();
     QString salesid=nowtime.toString("yyMMddhhmmss");
     salesid="8"+salesid.right(salesid.length()-1)+"5"+QString::number(orderindex);
@@ -106,15 +125,19 @@ void MainWindow::createtempsales()
     ui->orderIDCombobox->setItemData(0,salesid,Qt::DecorationRole);
     ui->orderIDCombobox->setCurrentText(dispalytext);
     ui->orderIDCombobox->setDuplicatesEnabled(false);
-    //orderModel->removeRows(0,orderModel->rowCount());
     orderModel->setFilter("sid='"+salesid+"'");
     orderModel->select();
     switchViewtype(-viewtype);
+    countordertotal();
 }
-
+/**
+ * @brief 订单号发生改变重新加载菜单数据
+ * @param index
+ */
 void MainWindow::orderIDchange(int index)
 {
     QString salesid = ui->orderIDCombobox->itemData(index,Qt::DecorationRole).toString();
+    //如果是模板选择项,生成一个新的订单
     if(salesid=="ordertemplate"){
         salesid=ui->orderIDCombobox->itemData(index,Qt::EditRole).toString();
         QSqlQuery query("select * from t_template where name='"+salesid+"'");
@@ -137,18 +160,27 @@ void MainWindow::orderIDchange(int index)
         }
         return;
     }
-
     orderModel->setFilter("sid='"+salesid+"'");
     orderModel->select();
+    countordertotal();
     switchViewtype(-viewtype);
 }
 /**
  * @brief 从本地数据库加载数据并存到本地文件中
  */
-void MainWindow::loadDishesLocalData()
+void MainWindow::loadDishesLocalData(QString sqltext,bool isapppend)
 {
-    QSqlQuery query("select * from t_dishes");
-    query.exec();
+    QSqlQuery query;
+    if(sqltext.isEmpty()){
+      query.exec("select * from t_dishes");
+    }else{
+      query.exec(sqltext);
+    }
+    loadDishesLocalData(query,isapppend);
+}
+
+void MainWindow::loadDishesLocalData(QSqlQuery query, bool isapppend)
+{
     QJsonArray dishesJsonArrayData;
     QSqlRecord record=query.record();
     while(query.next()){
@@ -156,12 +188,17 @@ void MainWindow::loadDishesLocalData()
         for(int i=0;i<record.count();i++){
             jsonobj.insert(record.fieldName(i),query.value(i).toString());
         }
-        dishesJsonArrayData.append(jsonobj);
+        if(isapppend){
+           this->dishesJsonListData.append(jsonobj);
+        }else{
+           dishesJsonArrayData.append(jsonobj);
+        }
+
     }
-
-    dishesJsonListData=dishesJsonArrayData;
-    switchViewtype(-viewtype);
-
+    if(!isapppend){
+       dishesJsonListData=dishesJsonArrayData;
+    }
+    emit updatetoptipmessage("数据加载完成");
 }
 /**
  * @brief 处理临存和上次的订单以及加载模板
@@ -169,7 +206,7 @@ void MainWindow::loadDishesLocalData()
 void MainWindow::loadcacheorder()
 {
     ui->orderIDCombobox->clear();
-    orderindex=1;
+    orderindex=0;
     QString datestr=QDateTime::currentDateTime().addDays(-1).toString("yyyy-MM-dd hh:mm:ss");
     QSqlQuery query;
     query.exec("delete from t_order where cd<='"+datestr+"'");
@@ -178,12 +215,17 @@ void MainWindow::loadcacheorder()
         ui->orderIDCombobox->insertItem(0,query.value("name").toString());
         ui->orderIDCombobox->setItemData(0,"ordertemplate",Qt::DecorationRole);
     }
+    orderActions.clear();
     query.exec("select sid from t_order group by sid");
     while(query.next()){
-        QString IDstr=query.value("sid").toString();
-        IDstr=QString::number(orderindex++)+"  "+IDstr.mid(6,2)+":"+IDstr.mid(8,2)+":"+IDstr.mid(10,2);
+        QString siddata;
+        QString IDstr=siddata=query.value("sid").toString();
+        int t_index=IDstr.mid(13,IDstr.length()-13).toInt();
+        if(t_index>orderindex)orderindex=t_index;
+        IDstr=QString::number(t_index)+"  "+IDstr.mid(6,2)+":"+IDstr.mid(8,2)+":"+IDstr.mid(10,2);
         ui->orderIDCombobox->insertItem(0,IDstr);
         ui->orderIDCombobox->setItemData(0,query.value("sid"),Qt::DecorationRole);
+        ui->orderIDCombobox->setCurrentText(IDstr);
     }
 }
 /**
@@ -218,10 +260,11 @@ void MainWindow::increasedishes(QJsonObject dishesobject, int addnum, bool autou
 {
     int id = dishesobject.value("id").toVariant().toInt();
     int r_index= findordered(id,dishesobject.value("name").toString());
+    int newcount=addnum;
     //qDebug()<<"寻找已经点菜品"<<r_index;
     if(r_index>=0){
         //计算数量
-        int newcount=orderModel->index(r_index,2).data().toInt()+addnum;
+        newcount=orderModel->index(r_index,2).data().toInt()+addnum;
         orderModel->setData(orderModel->index(r_index,2),newcount);
         //计算金额
         double newmoney=dishesobject.value("bprice").toVariant().toDouble()*newcount;
@@ -244,10 +287,14 @@ void MainWindow::increasedishes(QJsonObject dishesobject, int addnum, bool autou
         if(orderModel->lastError().type()!= QSqlError::NoError){
             YF::popErrorMessage(this,orderModel->lastError().text());
         }
-
     }
     orderModel->select();
-    if(autoupdatecheck)changedishedcheck(id,orderModel->index(r_index,2).data().toInt());
+    countordertotal();
+    if(dishesobject==fetchDishesID()){
+        changedishedcheck(ui->tableView->currentIndex(),newcount);
+        return;
+    }
+    if(autoupdatecheck)changedishedcheck(id,newcount);
 }
 /**
  * @brief 删减菜品订单数量
@@ -276,6 +323,7 @@ void MainWindow::decreasedishes(int r_index,int num,bool autoupdatecheck){
     }
     orderModel->submitAll();
     orderModel->select();
+    countordertotal();
     if(autoupdatecheck)changedishedcheck(id,count);
 }
 
@@ -290,6 +338,7 @@ void MainWindow::insertNotification(QJsonObject json)
  * @return 当前model的josn数据
  */
 QJsonObject MainWindow::fetchDishesID(QModelIndex index){
+    if(index.row()==-1)index=ui->tableView->currentIndex();
     if(viewtype==scaleview||viewtype==wordbutton){
         QVariant tempdata=index.data();
         return tempdata.toJsonObject();
@@ -305,49 +354,9 @@ QJsonObject MainWindow::fetchDishesID(QModelIndex index){
  */
 void MainWindow::changedishedcheck(int id, int num)
 {
-    qDebug()<<"要改变图标的菜单ID"<<id<<num;
-    int t_r=0;
-    int t_c=0;
-    bool finded=false;
-    QJsonObject dishesobj;
-    if(viewtype==scaleview||viewtype==wordbutton){
-        for(t_r=0;t_r<dishesModel->rowCount();t_r++){
-            for(t_c=0;t_c<dishesModel->columnCount();t_c++){
-                dishesobj=dishesModel->index(t_r,t_c).data().toJsonObject();
-                int t_id=dishesobj.value("id").toVariant().toInt();
-                if(t_id==id){
-                    finded=true;
-                    break;
-                }
-            }
-            if(finded)break;
-        }
-        if(!finded)return;
-        ui->tableView->setCurrentIndex(dishesModel->index(t_r,t_c));
-        //ui->tableView->setFocus();
-        if(num>0){
-           qDebug()<<"找到了:r"<<t_r<<"l" <<t_c;
-           dishesobj.insert("checkednum",num);
-           dishesobj.insert("selected",true);
-           dishesModel->setData(dishesModel->index(t_r,t_c),dishesobj);
-        }else{
-            dishesobj.insert("checkednum",0);
-            dishesobj.insert("selected",false);
-            dishesModel->setData(dishesModel->index(t_r,t_c),dishesobj);
-        }
-    }
-    else if(viewtype==listtable){
-        for(t_r=0;t_r<dishesModel->rowCount();t_r++){
-            dishesobj=dishesModel->index(t_r,8).data().toJsonObject();
-            int t_id=dishesobj.value("id").toVariant().toInt();
-            if(t_id==id){
-                finded=true;
-                break;
-            }
-        }
-        if(!finded)return;
-        dishesModel->setData(dishesModel->index(t_r,5),num);
-    }
+    QModelIndex dishesmodelindex=finddishes("id",id);
+    if(dishesmodelindex.row()<0)return;
+    changedishedcheck(dishesmodelindex,num);
 }
 /**
  * @brief MainWindow::changedishedcheck
@@ -377,16 +386,24 @@ void MainWindow::changedishedcheck(QModelIndex index, int changenum)
             dishesModel->setData(dishesModel->index(rowindex,5),0);
         }
     }
-
 }
-
+//切换回显菜单
 void MainWindow::switchViewtype(int newviewtype)
 {
-    //QJsonArray dishesJsonListData=YF::settingvalue("dishesJsonListData").toJsonArray();
-    ui->toptiplabel->setText(tr("正在切换显示模式........"));
+    emit updatetoptipmessage(tr("正在切换显示模式........"));
     if(viewtype==newviewtype)return;
     dishesModel->clear();
     //if(newviewtype==-100)newviewtype=viewtype;
+    int colmncount=YF::settingvalue("dishesmodel_columncount").toInt();
+    int rowheight=YF::settingvalue("dishesmodel_RowHeight").toInt();
+    int rowwidth=YF::settingvalue("dishesmodel_Rowwidth").toInt();
+    //修正单元视图
+    int tableviewwidth=ui->tableView->width();
+    int unitcont=tableviewwidth/rowwidth;
+    colmncount=unitcont;
+    //滚动条的20px需要计算
+    rowwidth=(tableviewwidth-20)/unitcont;
+    //加载视图部分
     if(newviewtype<0)newviewtype=qAbs(newviewtype);
     if(newviewtype==scaleview||newviewtype==wordbutton){
         ui->tableView->verticalHeader()->setVisible(false);
@@ -395,17 +412,19 @@ void MainWindow::switchViewtype(int newviewtype)
         ui->tableView->setSelectionBehavior(QAbstractItemView::SelectItems);
         ui->tableView->setSelectionMode(QAbstractItemView::SingleSelection);
         ui->tableView->horizontalHeader()->setStretchLastSection(false);
+        //ui->tableView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
         disconnect(ui->tableView->horizontalHeader(),SIGNAL(sectionResized(int,int,int)),this,SLOT(resizeGridClomn(int,int,int)));
-        dishesModel->setColumnCount(m_colmncount);
+        dishesModel->setColumnCount(colmncount);
         int cindex=0;
         int rindex=-1;
+        int quickindex=0;
         for(int i=0;i<dishesJsonListData.size();++i){
             if(cindex==0){
                rindex++;
                dishesModel->insertRow(rindex);
-               ui->tableView->setRowHeight(rindex,m_colmnheight);
+               ui->tableView->setRowHeight(rindex,rowheight);
             }
-            ui->tableView->setColumnWidth(cindex,m_colmnwidth);
+            ui->tableView->setColumnWidth(cindex,rowwidth);
             QJsonObject jsonobj=dishesJsonListData.at(i).toObject();
             jsonobj.insert("viewtype",newviewtype);
             //qDebug()<<"是否已经下订单:"<<findordered(QString::number(jsonobj.value("ID").toInt()));
@@ -414,9 +433,11 @@ void MainWindow::switchViewtype(int newviewtype)
                 jsonobj.insert("selected",true);
                 jsonobj.insert("checkednum",orderModel->index(t_orderindex,2).data().toInt());
             }
+            if(quickindex<9)jsonobj.insert("quick",++quickindex);
             dishesModel->setData(dishesModel->index(rindex,cindex),jsonobj);
-            cindex=cindex>=m_colmncount-1?0:cindex+1;
+            cindex=cindex>=colmncount-1?0:cindex+1;
         }
+        ui->tableView->horizontalHeader()->setStretchLastSection(true);
     }else{
         ui->tableView->setShowGrid(true);
         ui->tableView->verticalHeader()->setVisible(true);
@@ -454,14 +475,6 @@ void MainWindow::switchViewtype(int newviewtype)
         }
     }
     viewtype=newviewtype;
-//    QJsonObject json;
-//    json.insert("table","toptip");
-//    json.insert("type",0);
-//    json.insert("content",QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss")+":这是一个测试内容");
-//    json.insert("fromer","系统");
-//    json.insert("lasttime","2014-11-28 05:10:10");
-//    json.insert("times","10");
-//     qDebug()<<YF::sql(json);
     emit updatetoptipmessage("视图更新完成!!!",0);
 }
 /**
@@ -520,80 +533,103 @@ void MainWindow::resizeGridClomn(int logicalIndex, int oldSize, int newSize)
     YF::setsetting(sender()->parent()->objectName()+"/colmnswidth_"+logicalIndex,newSize);
 }
 
-void MainWindow::showNotification(QString text, int msgtype)
-{
-    if(msgtype==0&&!text.isEmpty()){
-        ui->toptiplabel->setText(text);
-        //2秒钟重新调用通知,读取数据库的提示通知.
-        QTimer::singleShot(3000,this,SLOT(showNotification()));
-        return;
-    }
-    QSqlQuery query;
-    QString nowstr=QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
-//    qDebug()<<query.exec("select * from toptip");
-    qDebug()<<query.exec("select * from toptip where times>0 and lasttime>='"+nowstr+"' order by id desc limit 0,1");
-    if(query.next()){
-        QString messagetext=query.value("content").toString();
-        ui->toptiplabel->setText(messagetext);
-        QString id=query.value("id").toString();
-        qDebug()<<"查到值,数据:"<<messagetext<<id<<query.value("times")<<query.value("lasttime");
-        query.exec("update toptip set times=times-1 where id="+id);
-        QTimer::singleShot(5000,this,SLOT(showNotification()));
-    }
-    query.clear();
-
-
-
-}
-
 void MainWindow::keyPressEvent(QKeyEvent *event)
 {
+    int keyindex=event->key();
+    //不带修饰器的
+    if(focusWidget()==ui->tableView&&ui->tableView->currentIndex().row()==0&&keyindex==Qt::Key_Up){
+        ui->lineEdit->setFocus();
+        return;
+    }
+    if(focusWidget()==ui->tableView&&ui->tableView->currentIndex().column()==dishesModel->columnCount()-1&&keyindex==Qt::Key_Right){
+        ui->tableView_2->setFocus();
+        return;
+    }
+    if(focusWidget()==ui->tableView_2&&keyindex==Qt::Key_Left){
+        ui->tableView->setFocus();
+        return;
+    }
+
+    //携带修饰器的处理
     if(!event->modifiers().testFlag(Qt::ControlModifier))return;
+    //快捷键部分
+    if(keyindex==Qt::Key_D){
+        ui->tableView->setFocus();
+        return;
+    }
+    if(keyindex==Qt::Key_G){
+        ui->tableView->setFocus();
+        return;
+    }
+
+    if(keyindex==Qt::Key_F){
+        ui->lineEdit->clear();
+        ui->lineEdit->setFocus();
+    }
+    if(keyindex==Qt::Key_P){
+        //打印结算
+        return;
+    }
+    if(keyindex==Qt::Key_O){
+        //设置与功能说明
+       return;
+    }
+    if(keyindex==Qt::Key_Q){
+        //查询功能
+        return;
+    }
+    if(keyindex==Qt::Key_N){
+        createtempsales();
+        return;
+    }
+    //快速点菜切换处理
+    if(keyindex==Qt::Key_Enter||keyindex==Qt::Key_Return){
+        if(focusWidget()==ui->lineEdit){
+            ui->tableView->setFocus();
+        }
+        if(focusWidget()==ui->tableView){
+            increasedishes(fetchDishesID(ui->tableView->currentIndex()));
+            ui->lineEdit->clear();
+            ui->lineEdit->setFocus();
+        }
+        return;
+    }
+    //操作点菜功能
     if(focusWidget()==ui->tableView_2&&ui->tableView_2->currentIndex().row()>=0){
         int t_index=ui->tableView_2->currentIndex().row();
-        int t_count=orderModel->index(t_index,2).data().toInt();
-        double t_price=orderModel->index(t_index,1).data().toDouble();
+        if(keyindex==Qt::Key_Left){
+            ui->tableView->setFocus();
+            return;
+        }
         ui->tableView_2->selectRow(t_index);
         if(event->key()==Qt::Key_Plus){
-                //订单自加运算
-                orderModel->setData(orderModel->index(t_index,2),++t_count);
-                t_price=t_price*t_price;
-                orderModel->setData(orderModel->index(t_index,3),t_price);
-                orderModel->submit();
+            QModelIndex modelindex=finddishes("id",orderModel->index(t_index,4).data());
+            increasedishes(fetchDishesID(modelindex),1);
         }
         else if(event->key()==Qt::Key_Minus){
-            //订单自减运算
-            int dishesid=orderModel->index(t_index,4).data().toInt();
-            if(t_count<=1){
-                changedishedcheck(dishesid,0);
-                orderModel->removeRow(t_index);
-                orderModel->submitAll();
-                orderModel->select();
-                ui->tableView_2->setCurrentIndex(orderModel->index(orderModel->rowCount()-1,0));
-            }else{
-                orderModel->setData(orderModel->index(t_index,2),--t_count);
-                t_price=t_price*t_count;
-                orderModel->setData(orderModel->index(t_index,3),t_price);
-                changedishedcheck(orderModel->index(t_index,4).data().toInt(),t_count);
-                orderModel->submit();
-            }
+            decreasedishes(t_index,1,true);
+            ui->tableView_2->setCurrentIndex(orderModel->index(orderModel->rowCount()-1,0));
         }
     }
     if(focusWidget()==ui->tableView&&ui->tableView->currentIndex().row()>=0){
-        if(event->key()==Qt::Key_Plus){
+        if(keyindex==Qt::Key_Plus){
             on_tableView_doubleClicked(ui->tableView->currentIndex());
         }
-        else if(event->key()==Qt::Key_Minus)
+        else if(keyindex==Qt::Key_Minus)
         {
              decreasedishes(fetchDishesID(ui->tableView->currentIndex()));
         }
-
+        else if(keyindex>48&&keyindex<=57){
+            QModelIndex dishesmodelindex=finddishes("quick",keyindex-48);
+            if(dishesmodelindex.row()>-1){
+                increasedishes(fetchDishesID(dishesmodelindex));
+            }
+        }
     }
 }
 
 void MainWindow::resizeEvent(QResizeEvent *)
 {
-
    QRect mrect=this->rect();
    QRect rect=ui->toptiplabel->rect();
    rect.setRight(mrect.right());
@@ -604,11 +640,17 @@ void MainWindow::resizeEvent(QResizeEvent *)
    ui->orderIDlabel->move(mrect.right()-ui->orderIDlabel->width(),ui->orderIDlabel->y());
    ui->settingbtn->move(mrect.right()-ui->settingbtn->width(),ui->settingbtn->y());
    ui->settlebtn->move(mrect.right()-ui->settlebtn->width(),mrect.bottom()-ui->settlebtn->height());
+   rect=ui->totallable->rect();
+   rect.setLeft(ui->createbtn->x());
+   rect.setRight(mrect.right());
+   rect.setTop(ui->settlebtn->y()-rect.height()-1);
+   rect.setBottom(ui->settlebtn->y()-1);
+   ui->totallable->setGeometry(rect);
    rect=ui->tableView_2->rect();
    rect.setLeft(ui->createbtn->x());
    rect.setRight(mrect.right());
    rect.setTop(ui->orderIDlabel->y()+ui->orderIDlabel->height()+1);
-   rect.setBottom(ui->settlebtn->y()-1);
+   rect.setBottom(ui->totallable->y()-1);
    ui->tableView_2->setGeometry(rect);
    ui->funframe->resize(ui->createbtn->x()-1,ui->funframe->height());
    ui->tableView->resize(ui->createbtn->x()-1,mrect.height()-ui->tableView->y()-1);
@@ -628,7 +670,12 @@ YFTask::YFTask()
     QDir::current().mkpath("temp/images");
     network=new QNetworkAccessManager();
     connect(network,SIGNAL(finished(QNetworkReply*)),this,SLOT(finished(QNetworkReply*)));
+}
 
+YFTask::YFTask(Ui::MainWindow *t_ui)
+{
+    YFTask();
+    this->ui=t_ui;
 }
 
 void YFTask::httpdownload(QUrl url)
@@ -639,7 +686,6 @@ void YFTask::httpdownload(QUrl url)
     //qDebug()<<"http下载结束";
     mutex.unlock();
 }
-
 void YFTask::finished(QNetworkReply *repy)
 {
    QString filename = repy->url().fileName();
@@ -650,13 +696,47 @@ void YFTask::finished(QNetworkReply *repy)
    repy->deleteLater();
 }
 
+void YFTask::showNotification(QString text, int msgtimes)
+{
+    static QMutex notificationmutex;
+    notificationmutex.lock();
+    QSqlQuery query;
+    if(!text.isEmpty()){
+        ui->toptiplabel->setText("["+YF_getdatetime()+"]:"+text);
+        QThread::sleep(1);
+        //toptiplable->repaint();
+        //2秒钟重新调用通知,读取数据库的提示通知.
+        if(msgtimes>0){
+            query.prepare("insert into toptip (type,content,fromer,lasttime,times) values (?,?,?,?,?)");
+            query.bindValue(0,0);
+            query.bindValue(1,text);
+            query.bindValue(2,"系统");
+            query.bindValue(3,YF_getdatetime(QDateTime::currentDateTime(),1));
+            query.bindValue(4,msgtimes);
+            query.exec();
+        }
+        QTimer::singleShot(3000,this,SLOT(showNotification()));
+        notificationmutex.unlock();
+        return;
+    }
+    QString nowstr=QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss");
+    query.exec("select * from toptip where times>0 and lasttime>='"+nowstr+"' order by id desc limit 0,1");
+    if(query.next()){
+        QString messagetext=query.value("content").toString();
+        ui->toptiplabel->setText(messagetext);
+        QString id=query.value("id").toString();
+        qDebug()<<"查到值,数据:"<<messagetext<<id<<query.value("times")<<query.value("lasttime");
+        query.exec("update toptip set times=times-1 where id="+id);
+        query.exec("delte from toptip where type=0 and times=0");
+        QTimer::singleShot(5000,this,SLOT(showNotification()));
+    }
+    query.clear();
+    notificationmutex.unlock();
+}
+
 void MainWindow::on_pushButton_clicked()
 {
-    QSqlQuery query;
-    qDebug()<<"query地址:"<<&query;
-    qDebug()<<"查询缓存订单:"<<YF::sql("select * from t_order",&query);
-    qDebug()<<"query地址:"<<&query<<query.next()<<query.lastQuery();
-    while(query.next())qDebug()<<"值:"<<query.value("id");
+    //qDebug()<<(QVariant(1)==QVariant("1.0"));
 }
 
 void MainWindow::searchdishes(QString text)
@@ -664,24 +744,232 @@ void MainWindow::searchdishes(QString text)
     qDebug()<<text;
     if(text.isEmpty())return;
     QString sqltext;
-    QByteArray bytes=text.left(1).toLatin1();
+    QByteArray bytes=text.left(1).toLocal8Bit();
     qDebug()<<bytes.count();
-    QChar qch(bytes.at(0));
-    if(qch.isNumber()){
-        sqltext="select barcode from t_dishes where barcode like '%"+text+"%'";
+    if(bytes.count()<2){
+        QChar qch(bytes.at(0));
+        if(qch.isNumber()){
+            sqltext="select barcode,name,id from t_dishes where barcode like '%"+text+"%'";
+        }
+        if(qch.isLetter()){
+            sqltext="select pinyin,name,id from t_dishes where pinyin like '%"+text+"%'";
+        }
+    }else{
+        sqltext="select name,id from t_dishes where name like '%"+text+"%'";
     }
-    if(qch.isLetter()){
-        sqltext="select pinyin,name from t_dishes where pinyin like '%"+text+"%'";
-    }
-
     dishessearchModel->setQuery(sqltext);
-    qDebug()<<dishessearchModel->query().value("name");
+    int cls=dishessearchModel->columnCount();
+    //qDebug()<<dishessearchModel->query().value("name");
     QFont font;
     font.setBold(true);
-    font.setPixelSize(24);
+    font.setPixelSize(20);
     font.setFamily("宋体");
-    ui->lineEdit->completer()->popup()->setFont(font);
-    //ui->lineEdit->completer()->popup()->setCurrentIndex(dishessearchModel->index(0,0));
-    ui->lineEdit->completer()->setMaxVisibleItems(20);
-    ui->lineEdit->completer()->setCompletionColumn(0);
+    QTableView *t_tableviw=qobject_cast<QTableView*>(ui->lineEdit->completer()->popup());
+    t_tableviw->setFont(font);
+    t_tableviw->resizeRowsToContents();
+    t_tableviw->resizeColumnsToContents();
+    t_tableviw->horizontalHeader()->setStretchLastSection(true);
+    t_tableviw->setWordWrap(false);
+    if(cls-2>0)t_tableviw->setColumnHidden(cls-2,false);
+    if(cls-1>0)t_tableviw->setColumnHidden(cls-1,true);
+}
+/**
+ * @brief 这是自定义菜单
+ * @param pos
+ */
+void MainWindow::customContext(QPoint )
+{
+    QSqlQuery query;
+    if(ui->label==sender()&&orderModel->rowCount()>0){
+        QPoint lablelglobalpoint=ui->label->mapToGlobal(ui->label->pos());
+        lablelglobalpoint.ry()+=ui->label->height();
+        QString sid=ui->orderIDCombobox->currentData(Qt::DecorationRole).toString();
+        QMenu *movemenu=0;
+         QMenu *returmenu=0;
+        query.exec("select sid from t_order where sid<>'"+sid+"' group by sid");
+
+        if(query.next()){
+           movemenu=new QMenu(tr("转移此订单"),this);
+           ordermenu->addMenu(movemenu);
+           do {
+               QString IDstr=query.value("sid").toString();
+               int t_index=IDstr.mid(13,IDstr.length()-13).toInt();
+               QString actiontitle=QString::number(t_index)+"  "+IDstr.mid(6,2)+":"+IDstr.mid(8,2)+":"+IDstr.mid(10,2);
+               QAction *t_action=new QAction(actiontitle,movemenu);
+               t_action->setData(IDstr);
+               t_action->setObjectName("join");
+               movemenu->insertAction(0,t_action);
+               connect(t_action,SIGNAL(triggered()),this,SLOT(actionhandle()));
+           } while (query.next());
+        }
+        query.exec("select sw from t_order where sid='"+sid+"' and sw like 'move:%' group by sw");
+        if(query.next()){
+            returmenu=new QMenu(tr("分离此订单"),this);
+            ordermenu->addMenu(returmenu);
+            do {
+                QString IDstr=query.value("sw").toString();
+                IDstr=IDstr.replace("move:","");
+                int t_index=IDstr.mid(13,IDstr.length()-13).toInt();
+                QString actiontitle=QString::number(t_index)+"  "+IDstr.mid(6,2)+":"+IDstr.mid(8,2)+":"+IDstr.mid(10,2);
+                QAction *t_action=new QAction(actiontitle,returmenu);
+                t_action->setData(IDstr);
+                t_action->setObjectName("split");
+                returmenu->insertAction(0,t_action);
+                connect(t_action,SIGNAL(triggered()),this,SLOT(actionhandle()));
+            } while (query.next());
+        }
+        ordermenu->exec(lablelglobalpoint);
+        if(returmenu!=0){
+          returmenu->deleteLater();
+        }
+        if(movemenu!=0){
+            movemenu->deleteLater();
+        }
+
+    }
+}
+void MainWindow::searchfinished()
+{
+    QString text=ui->lineEdit->text();
+    if(text.isEmpty())return;
+    int t_c=dishessearchModel->columnCount()-1;
+    int t_r=ui->lineEdit->completer()->popup()->currentIndex().row();
+    QString topid=dishessearchModel->index(t_r,t_c).data().toString();
+//    qDebug()<<topid;
+    if(topid.isEmpty())topid="-1";
+    loadDishesLocalData("select * from t_dishes where id="+topid);
+    QString ids;
+    for(int i=0;i<dishessearchModel->rowCount();i++){
+        QString thisid=dishessearchModel->index(i,t_c).data().toString();
+        if(topid!=thisid)ids+=thisid+",";
+    }
+//    qDebug()<<ids.left(ids.length()-1);
+    loadDishesLocalData("select * from t_dishes where id in ("+ids.left(ids.length()-1)+")",true);
+    loadDishesLocalData("select * from t_dishes where id not in ("+ids+topid+")",true);
+    switchViewtype(-viewtype);
+    ui->tableView->setCurrentIndex(dishesModel->index(0,0));
+}
+
+QModelIndex MainWindow::finddishes(QString propertyname, QVariant value)
+{
+    if(propertyname.isEmpty())return QModelIndex();
+    if(viewtype==scaleview||viewtype==wordbutton){
+        int t_r=0;
+        int t_c=0;
+        for(t_r=0;t_r<dishesModel->rowCount();t_r++){
+            for(t_c=0;t_c<dishesModel->columnCount();t_c++){
+                 QJsonObject jsonobj=dishesModel->index(t_r,t_c).data().toJsonObject();
+                 qDebug()<<t_r<<t_c<<jsonobj;
+                 if(jsonobj.value(propertyname).toVariant()==value){
+                     return dishesModel->index(t_r,t_c);
+                 }
+            }
+        }
+    }else{
+        for(int i=0;i<dishesModel->rowCount();i++){
+            QJsonObject jsonobj=dishesModel->index(i,8).data().toJsonObject();
+            if(jsonobj.value(propertyname).toVariant()==value){
+                return dishesModel->index(i,8);
+            }
+        }
+
+    }
+    return QModelIndex();
+}
+
+void MainWindow::actionhandle()
+{
+    QAction *t_action=qobject_cast<QAction*>(sender());
+    QString t_title=t_action->text();
+    QSqlQuery query;
+    QString sid=ui->orderIDCombobox->currentData(Qt::DecorationRole).toString();
+    if(t_title=="删除此订单"){
+        query.exec("delete from t_order where sid='"+sid+"'");
+        loadcacheorder();
+        return;
+    }else if(t_title=="复制此订单"){
+        createtempsales();
+        QString newsid=ui->orderIDCombobox->currentData(Qt::DecorationRole).toString();
+        query.exec("insert into t_order(mz,dj,sl,je,did,cd,sw,sid)select mz,dj,sl,je,did,'"+YF_getdatetime()+"','normal','"+newsid+"'"+" from t_order where sid='"+sid+"'");
+        qDebug()<<"insert into t_order(mz,dj,sl,je,did,cd,sw,sid)select mz,dj,sl,je,did,'"+YF_getdatetime()+"','normal','"+newsid+"'"+" from t_order where sid='"+sid+"'";
+        loadcacheorder();
+        int ordercomboxindex=ui->orderIDCombobox->currentIndex();
+        qDebug()<<ordercomboxindex<<ui->orderIDCombobox->count()<<ui->orderIDCombobox->currentText()<<ui->orderIDCombobox->size();
+        emit ui->orderIDCombobox->activated(ordercomboxindex);
+        return;
+    }else{
+        if(t_action->objectName()=="join"){
+            qDebug()<<t_action;
+            if(t_action->data()==ui->orderIDCombobox->currentData(Qt::DecorationRole))return;
+            QString newsid=t_action->data().toString();
+            QString sqltext="update t_order set sid=?,sw=? where sid=?";
+            query.prepare(sqltext);
+            query.bindValue(0,newsid);
+            query.bindValue(1,"move:"+sid);
+            query.bindValue(2,sid);
+            query.exec();
+        }else if(t_action->objectName()=="split"){
+            QString newid=t_action->data().toString();
+            QString sqltext="update t_order set sid=?,sw=? where sid=? and sw=?";
+            query.prepare(sqltext);
+            query.bindValue(0,newid);
+            query.bindValue(1,"back:"+sid);
+            query.bindValue(2,sid);
+            query.bindValue(3,"move:"+t_action->data().toString());
+            query.exec();
+        }
+        loadcacheorder();
+    }
+
+}
+
+void MainWindow::countordertotal(QString sid)
+{
+    QSqlQuery query;
+    if(sid.isEmpty()){
+        sid=ui->orderIDCombobox->currentData(Qt::DecorationRole).toString();
+    }
+    query.exec("select sum(je) from t_order where sid='"+sid+"'");
+    if(query.next()){
+        ui->totallable->setText("总金额:"+QString::number(query.value(0).toDouble())+"元");
+    }
+}
+bool MainWindow::eventFilter(QObject *target, QEvent *event){
+
+    if(target==ui->lineEdit){
+        if(event->type()==QEvent::FocusIn){
+            QPalette p=QPalette();
+            p.setColor(QPalette::Base,Qt::gray);
+            ui->lineEdit->setPalette(p);
+        }
+        if (event->type()==QEvent::FocusOut)    // 这里指 lineEdit1 控件的失去焦点事件
+        {
+          QPalette p=QPalette();
+          p.setColor(QPalette::Base,Qt::white);
+          ui->lineEdit->setPalette(p);
+        }
+
+        if(event->type()==QEvent::KeyPress){
+            QKeyEvent *keyEvent = static_cast<QKeyEvent*>(event);
+            int keyindex=keyEvent->key();
+            if(keyEvent->modifiers().testFlag(Qt::ControlModifier)&&keyindex>48&&keyindex<=57){
+                qDebug()<<"ctrl事件在lineedit";
+                QModelIndex dishesmodelindex=finddishes("quick",keyindex-48);
+                if(dishesmodelindex.row()>-1){
+                    increasedishes(fetchDishesID(dishesmodelindex));
+                    ui->lineEdit->clear();
+                }
+                return true;
+           }
+           if(ui->lineEdit->text().isEmpty()&&keyindex==Qt::Key_Right){
+               ui->tableView_2->setFocus();
+               return true;
+           }
+           if(ui->lineEdit->text().isEmpty()&&keyindex==Qt::Key_Down){
+               ui->tableView->setFocus();
+               return true;
+           }
+        }
+    }
+    return qApp->eventFilter(target,event);
 }

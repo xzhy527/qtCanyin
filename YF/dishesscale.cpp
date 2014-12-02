@@ -4,6 +4,8 @@
 #include <QFont>
 #include <QString>
 #include <QUrl>
+#include <QLinearGradient>
+#include <QTableView>
 DishesScale::DishesScale(QObject *parent) :
     QItemDelegate(parent)
 {
@@ -16,22 +18,25 @@ void DishesScale::paint(QPainter *painter, const QStyleOptionViewItem &option, c
     if(!json.isValid()||json.isNull()){
         return;
     }
+    QRect rect=option.rect;
+    QBrush brush;
+   QTableView *tableview = qobject_cast<QTableView *>(option.styleObject);
+
+   if(tableview->currentIndex()==index){
+       brush.setColor(Qt::blue);
+   }else{
+       brush.setColor(QColor(169,195,221,255));
+   }
+    brush.setStyle(Qt::SolidPattern);
+    painter->setBrush(brush);
+    //qDebug()<<"绘图区域:"<<rect;
     QJsonObject jsonobj=json.toJsonObject();
     if(jsonobj.count()>1){
-        QRect rect=option.rect;
         if(jsonobj.value("viewtype").toInt()==2){
             //简字显示类型
-            QRect s_rect(rect.x()+30,rect.y()+75,30,30);
-            if(jsonobj.value("selected").toBool()){
-                QImage img(":/images/checked2.png");
-                painter->drawImage(s_rect,img.scaled(50,50,Qt::KeepAspectRatio));
-            }
-//            else{
-//                painter->drawRect(s_rect);
-//            }
 
-
-            rect.adjust(0,0,-2,-1);
+            //缩小矩形
+            rect.adjust(0,0,-2,-2);
             painter->drawRect(rect);
             QFont font;
             font.setBold(true);
@@ -39,8 +44,30 @@ void DishesScale::paint(QPainter *painter, const QStyleOptionViewItem &option, c
             painter->setFont(font);
             QString text=QString::number(jsonobj.value("bprice").toVariant().toDouble()) + tr("元");
             painter->drawText(rect.x(),rect.y()+30,rect.width(),25,Qt::AlignCenter,jsonobj.value("name").toString());
-            painter->drawText(rect.x()+25,rect.y()+75,text);
+            painter->drawText(rect.x(),rect.y()+60,rect.width(),25,Qt::AlignCenter,text);
+            QString quicktext=jsonobj.value("quick").toVariant().toString();
 
+            if(!quicktext.isEmpty()){
+                QRect quickrect(rect.x()+rect.width()-37,rect.y()+1,35,25);
+                QLinearGradient linergradient(quickrect.topLeft(),quickrect.topRight());
+                linergradient.setColorAt(0.0,Qt::black);
+                linergradient.setColorAt(0.5,Qt::white);
+                linergradient.setColorAt(1.0,Qt::black);
+                linergradient.setSpread(QGradient::PadSpread);
+                painter->setBrush(linergradient);
+                //painter->setBrush(brush);
+                painter->drawRoundRect(quickrect,10,10);
+                painter->drawText(quickrect,Qt::AlignCenter,quicktext);
+            }
+            int imagewidth=30;
+            int imageheight=30;
+            int imageleft=rect.x()+(rect.width()-imagewidth)/2;
+            int imagetop=rect.y()+rect.height()-imageheight;
+            QPoint imagepoint(imageleft,imagetop);
+            if(jsonobj.value("selected").toBool()){
+                QImage img(":/images/checked2.png");
+                painter->drawImage(imagepoint,img.scaled(imagewidth,imageheight,Qt::KeepAspectRatio));
+            }
 
         }else{
             //缩略图模式

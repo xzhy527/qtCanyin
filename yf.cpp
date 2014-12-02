@@ -8,15 +8,11 @@ YF::YF(int &argc, char **argv):QApplication(argc,argv)
     qApp->setApplicationVersion(QLatin1String("1.0"));
     this->networkaccess=new QNetworkAccessManager(this);
     connect(this->networkaccess,SIGNAL(finished(QNetworkReply*)),this,SLOT(networkfinished(QNetworkReply*)));
-
-
 }
-
 YF::~YF()
 {
     QSqlDatabase::database().close();
 }
-
 YF *YF::self()
 {
     return (static_cast<YF*>(QCoreApplication::instance()));
@@ -28,10 +24,10 @@ void YF::setsetting(QString key, QVariant value,QString filename)
     config.setValue(key,value);
 }
 
-QVariant YF::settingvalue(QString key,QString filename)
+QVariant YF::settingvalue(QString key,QVariant defauit,QString filename)
 {
    QSettings config(filename,QSettings::IniFormat);
-   return config.value(key);
+   return config.value(key,defauit);
 }
 
 void YF::post(QString urltext, const QByteArray &data)
@@ -117,7 +113,7 @@ bool YF::initdatabaseconnect()
     db.exec("create table t_dishes (dishesid integer primary key,id integer\
     ,barcode,pinyin,name,sort,picaddr,desrc,logo,mprice float,bprice float\
     ,rate float,classname,validity int,cost float,ischeck int,expirydate int,\
-    ext1,ext2,ext3,genpy)");
+    ext1,ext2,ext3,genpy,addcount int default 0)");
     //id,信息类型,内容,发件人,最后提示时间,提示次数
     db.exec("create table db_toptip(id integer primary key,type,content,fromer,lasttime,times)");
     db.exec("create table t_sales(id integer primary key,saleid,salename,bprice,mprice,rate,sort,classname,quantity,rmbsum,waiter,creattime,state)");
