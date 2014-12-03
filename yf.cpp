@@ -119,6 +119,7 @@ bool YF::initdatabaseconnect()
     db.exec("create table t_sales(id integer primary key,saleid,salename,bprice,mprice,rate,sort,classname,quantity,rmbsum,waiter,creattime,state)");
     db.exec("create table t_order(mz,dj,sl,je,did,sid,cd,sw,id integer primary key)");
     db.exec("create table t_template(id int primary key,name,dishesname,dishesid,bprice,num,total)");
+    db.exec("create table t_account (id int primary key,saleid,paytype,cmoney,rmoney,operation,creattime,member,descr,isnormal)");
     return db.open();
 }
 /**
@@ -153,7 +154,7 @@ bool YF::sql(QVariant sqlvariant, QSqlQuery* r_query)
         for(int i=0;i<jsonkeys.count();i++){
             QString keyname=jsonkeys.at(i);
             QString fieldname=keyname.split(":").at(0);
-            if(record.indexOf(fieldname))cstrs<<keyname;
+            if(record.indexOf(fieldname)>-1)cstrs<<keyname;
         }
         //判断where条件是否存在和解析字段
         if(option!="insert"&&option!="drop"&&option!="delete"){

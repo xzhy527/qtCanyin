@@ -71,9 +71,7 @@ void DishesScale::paint(QPainter *painter, const QStyleOptionViewItem &option, c
 
         }else{
             //缩略图模式
-            QBrush b;
-            painter->setBrush(b);
-
+            rect.adjust(2,2,-2,-2);
             if(!jsonobj.value("picaddr").toString().isEmpty()){
                QString filepath=QUrl(jsonobj.value("picaddr").toString()).fileName();
                painter->drawImage(rect,QImage("temp/images/"+filepath));
@@ -81,14 +79,12 @@ void DishesScale::paint(QPainter *painter, const QStyleOptionViewItem &option, c
                 painter->drawImage(rect,QImage(":/images/checked.png"));
             }
 
-            painter->drawRoundRect(rect,4,4);
-            b.setColor(Qt::red);
-            b.setStyle(Qt::SolidPattern);
-            painter->setBrush(b);
-
-            //
-            painter->drawRoundRect(rect.x(),rect.y()+rect.height(),rect.width(),20,4,4);
-            //QByteArray dd=YF::get("http://www.skycn.com/static/ad/201411/skcy78080_1105.jpg");
+//            painter->drawRoundRect(rect,4,4);
+//            b.setColor(Qt::red);
+//            b.setStyle(Qt::SolidPattern);
+//            painter->setBrush(b);
+//            painter->drawRoundRect(rect.x(),rect.y()+rect.height(),rect.width(),20,4,4);
+//            //QByteArray dd=YF::get("http://www.skycn.com/static/ad/201411/skcy78080_1105.jpg");
             //QItemDelegate::paint(painter,option,index);
         }
 

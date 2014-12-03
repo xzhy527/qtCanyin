@@ -1,21 +1,22 @@
 #ifndef YFTOOLS_H
 #define YFTOOLS_H
-#include "yf.h"
+#include <QString>
+#include <QMessageBox>
 QString YF_getSpell(QString src);
 QString FirstLetter(int nCode);
 char convert(int n);
-void YF_alert(QString text)
+inline void YF_alert(QString text)
 {
     QMessageBox::about(qApp->activeWindow(),"提示",text);
 }
-QString YF_getdatetime(QDateTime datetime=QDateTime::currentDateTime(),int redays=0,int reseconds=0){
+inline QString YF_getdatetime(QDateTime datetime=QDateTime::currentDateTime(),int redays=0,int reseconds=0){
     QDateTime t_datetime=datetime;
     t_datetime=t_datetime.addDays(redays);
     t_datetime=t_datetime.addSecs(reseconds);
     return t_datetime.toString("yyyy-MM-dd hh:mm:ss");
 }
 
-QString YF_getSpell(QString src){
+inline QString YF_getSpell(QString src){
     wchar_t wchr;
     QString strPinYin;
     for (int i=0; i<src.length(); i++)
@@ -33,13 +34,11 @@ QString YF_getSpell(QString src){
     return strPinYin;
 }
 
-
-
-bool In(wchar_t start, wchar_t end, wchar_t code){
+inline bool In(wchar_t start, wchar_t end, wchar_t code){
     if (code >= start && code <= end)return true;
     return false;
 }
-char convert(int n)
+inline char convert(int n)
 {
     if (In(0xB0A1,0xB0C4,n)) return 'a';
     if (In(0XB0C5,0XB2C0,n)) return 'b';

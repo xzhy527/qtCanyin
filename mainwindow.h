@@ -33,14 +33,15 @@ private:
     QAction *copyAction;
     QList<QAction*> orderActions;//订单的菜单
     QJsonArray dishesJsonListData;
-    int findordered(int id=-1,QString name="");
+    int findordered(QString propertyname="id", QVariant value=QVariant(""), QString sw="");
     void increasedishes(QJsonObject dishesobject,int num=1,bool autoupdatecheck=true);
-    void decreasedishes(QJsonObject QJsonObject,int num=1,bool autoupdatecheck=true);
-    QJsonObject fetchDishesID(QModelIndex data=QModelIndex());
-    void changedishedcheck(int id, int num);
-    void changedishedcheck(QModelIndex index, int num);
+    int decreasedishes(QJsonObject QJsonObject,int num=1,bool autoupdatecheck=true);
+    int decreasedishes(int id, int num, bool autoupdatecheck);
+    void changedishedcheck(int id, int changenum);
+    void changedishedcheck(QModelIndex index,int changenum);
+    void changedishedcheck(QJsonObject dishesobject, int changenum);
     void switchViewtype(int newviewtype=2);
-    void decreasedishes(int id, int num, bool autoupdatecheck);
+
     void insertNotification(QJsonObject json);
 private slots:
     void replyjsonArray(QJsonArray);
@@ -62,6 +63,8 @@ private slots:
     QModelIndex finddishes(QString propertyname,QVariant value);
     void actionhandle();
     void countordertotal(QString sid="");
+    QJsonObject fetchDishesData(QModelIndex data=QModelIndex());
+    void settle();
 protected:
     virtual void keyPressEvent(QKeyEvent *event);
     virtual void resizeEvent(QResizeEvent *);

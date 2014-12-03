@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <widget class="QLabel" name="label">
+  <widget class="QLabel" name="orderidlable">
    <property name="geometry">
     <rect>
      <x>0</x>
@@ -57,7 +57,7 @@
      <string>会员卡/姓名</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit">
+   <widget class="QLineEdit" name="memberediter">
     <property name="geometry">
      <rect>
       <x>78</x>
@@ -140,10 +140,10 @@
      </font>
     </property>
     <property name="text">
-     <string>优惠金额</string>
+     <string>折扣比率</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_2">
+   <widget class="QLineEdit" name="freeediter">
     <property name="geometry">
      <rect>
       <x>274</x>
@@ -153,7 +153,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_3">
+   <widget class="QLineEdit" name="rateediter">
     <property name="geometry">
      <rect>
       <x>480</x>
@@ -163,7 +163,7 @@
      </rect>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_4">
+   <widget class="QLineEdit" name="ysediter">
     <property name="geometry">
      <rect>
       <x>72</x>
@@ -190,10 +190,10 @@
      </font>
     </property>
     <property name="text">
-     <string>应收金额</string>
+     <string>实收金额</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_5">
+   <widget class="QLineEdit" name="realediter">
     <property name="geometry">
      <rect>
       <x>72</x>
@@ -223,7 +223,7 @@
      <string>现金找零</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_6">
+   <widget class="QLineEdit" name="zlediter">
     <property name="geometry">
      <rect>
       <x>274</x>
@@ -253,7 +253,7 @@
      <string>支付方式</string>
     </property>
    </widget>
-   <widget class="QComboBox" name="comboBox">
+   <widget class="QComboBox" name="paytypecombox">
     <property name="geometry">
      <rect>
       <x>72</x>
@@ -283,7 +283,7 @@
      <string>备注信息</string>
     </property>
    </widget>
-   <widget class="QLineEdit" name="lineEdit_7">
+   <widget class="QLineEdit" name="descrediter">
     <property name="geometry">
      <rect>
       <x>72</x>
@@ -294,7 +294,7 @@
     </property>
    </widget>
   </widget>
-  <widget class="QPushButton" name="pushButton">
+  <widget class="QPushButton" name="printebtn">
    <property name="geometry">
     <rect>
      <x>584</x>
@@ -307,7 +307,7 @@
     <string>打印小票</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_2">
+  <widget class="QPushButton" name="sattlebtn">
    <property name="geometry">
     <rect>
      <x>584</x>
@@ -317,10 +317,10 @@
     </rect>
    </property>
    <property name="text">
-    <string>打印小票</string>
+    <string>结算</string>
    </property>
   </widget>
-  <widget class="QPushButton" name="pushButton_3">
+  <widget class="QPushButton" name="returnbtn">
    <property name="geometry">
     <rect>
      <x>584</x>

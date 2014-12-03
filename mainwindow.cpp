@@ -7,7 +7,7 @@
 #include "YF/YFTools.h"
 #include <QCompleter>
 #include <QMenu>
-
+#include "uporderform.h"
 MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent),ui(new Ui::MainWindow)
 {
     this->setGeometry(-1300,0,500,500);
@@ -33,7 +33,9 @@ MainWindow::MainWindow(QWidget *parent) :QMainWindow(parent),ui(new Ui::MainWind
     connect(ui->lineEdit,SIGNAL(textEdited(QString)),this,SLOT(searchdishes(QString)));
     connect(ui->label,SIGNAL(customContextMenuRequested(QPoint)),this,SLOT(customContext(QPoint)));
     connect(ui->lineEdit,SIGNAL(editingFinished()),this,SLOT(searchfinished()));
-      connect(ui->orderIDCombobox,SIGNAL(activated(int)) ,this,SLOT(orderIDchange(int)));
+    connect(ui->orderIDCombobox,SIGNAL(activated(int)) ,this,SLOT(orderIDchange(int)));
+    connect(ui->settlebtn,SIGNAL(clicked()),this,SLOT(settle()));
+
     ui->lineEdit->installEventFilter(this);
     ui->label->setContextMenuPolicy(Qt::CustomContextMenu);
     //延时调用初始画面
@@ -239,19 +241,25 @@ void MainWindow::loadcacheorder(QString orderid)
  * @param name
  * @return 已点订单的ID
  */
-int MainWindow::findordered(int id, QString name)
+int MainWindow::findordered(QString propertyname,QVariant value, QString sw)
 {
       if(orderModel->rowCount()<1)return -1;
-      if(id<0&&name.isEmpty())return -1;
-      bool re_ID=id<0?true:false;
-      bool re_name=name.isEmpty()?true:false;
-      int i=0;
-      for(;i<orderModel->rowCount();i++){
-         int orderid = orderModel->index(i,4).data().toInt();
-         QString ordername = orderModel->index(i,0).data().toString();
-         if(!re_ID&&orderid==id)re_ID=true;
-         if(!re_name&&name==ordername)re_name=true;
-         if(re_ID&&re_name) return i;
+      if(propertyname.isEmpty())return -1;
+      if(value.toString().isEmpty()){
+          value=fetchDishesData(ui->tableView->currentIndex()).value("id").toVariant();
+      }
+      int cindex=orderModel->fieldIndex(propertyname);
+      if(cindex<0)return -1;
+      for(int i=0;i<orderModel->rowCount();i++){
+         QVariant t_data = orderModel->index(i,cindex).data();
+         if(sw.isEmpty()){
+             if(t_data==value)return i;
+         }else{
+             int swindex=orderModel->fieldIndex("sw");
+             QVariant t_sw=orderModel->index(i,swindex).data();
+             qDebug()<<t_sw<<sw<<(t_sw==sw)<<t_data<<value<<(value==t_data);
+             if(t_sw==sw&&value==t_data)return i;
+         }
       }
       return -1;
 }
@@ -264,9 +272,8 @@ int MainWindow::findordered(int id, QString name)
 void MainWindow::increasedishes(QJsonObject dishesobject, int addnum, bool autoupdatecheck)
 {
     int id = dishesobject.value("id").toVariant().toInt();
-    int r_index= findordered(id,dishesobject.value("name").toString());
+    int r_index= findordered("did",id,"normal");
     int newcount=addnum;
-    //qDebug()<<"寻找已经点菜品"<<r_index;
     if(r_index>=0){
         //计算数量
         newcount=orderModel->index(r_index,2).data().toInt()+addnum;
@@ -295,25 +302,25 @@ void MainWindow::increasedishes(QJsonObject dishesobject, int addnum, bool autou
     }
     orderModel->select();
     countordertotal();
-    if(dishesobject==fetchDishesID()){
-        changedishedcheck(ui->tableView->currentIndex(),newcount);
-        return;
-    }
-    if(autoupdatecheck)changedishedcheck(id,newcount);
+    //如果是当前项目直接修改
+    if(autoupdatecheck)changedishedcheck(dishesobject,addnum);
 }
 /**
  * @brief 删减菜品订单数量
  * @param dishesobject
  * @param num 变化量
  */
-void MainWindow::decreasedishes(QJsonObject dishesobject,int num,bool autoupdatecheck)
+int MainWindow::decreasedishes(QJsonObject dishesobject,int num,bool autoupdatecheck)
 {
    int id = dishesobject.value("id").toVariant().toInt();
-   int r_index= findordered(id);
-   decreasedishes(r_index,num,autoupdatecheck);
+   int r_index= findordered("did",id,"normal");
+   if(r_index==-1)r_index=findordered("did",id);
+   int count=decreasedishes(r_index,num,false);
+   if(autoupdatecheck)changedishedcheck(dishesobject,-num);
+   return count;
 }
-void MainWindow::decreasedishes(int r_index,int num,bool autoupdatecheck){
-    if(r_index<0)return;
+int MainWindow::decreasedishes(int r_index,int num,bool autoupdatecheck){
+    if(r_index<0)return -1;
 //    qDebug()<<"减少菜品数量"<<r_index;
     int id=orderModel->index(r_index,4).data().toInt();
     int count=0;
@@ -330,7 +337,8 @@ void MainWindow::decreasedishes(int r_index,int num,bool autoupdatecheck){
     orderModel->submitAll();
     orderModel->select();
     countordertotal();
-    if(autoupdatecheck)changedishedcheck(id,count);
+    if(autoupdatecheck)changedishedcheck(id,-num);
+    return count;
 }
 
 void MainWindow::insertNotification(QJsonObject json)
@@ -343,40 +351,72 @@ void MainWindow::insertNotification(QJsonObject json)
  * @param index
  * @return 当前model的josn数据
  */
-QJsonObject MainWindow::fetchDishesID(QModelIndex index){
+QJsonObject MainWindow::fetchDishesData(QModelIndex index)
+{
+    QJsonObject re_t;
     if(index.row()==-1)index=ui->tableView->currentIndex();
-    if(viewtype==scaleview||viewtype==wordbutton){
-        QVariant tempdata=index.data();
-        return tempdata.toJsonObject();
+    if(viewtype==scaleview||viewtype==wordbutton){      
+        re_t=index.data().toJsonObject();
     }
     else{
-        return dishesModel->index(index.row(),8).data().toJsonObject();
+        re_t=dishesModel->index(index.row(),8).data().toJsonObject();
     }
+    re_t.insert("r_index",index.row());
+    re_t.insert("c_index",index.column());
+    return re_t;
+}
+
+void MainWindow::settle()
+{
+    qDebug()<<"现在进行结算";
+    if(orderModel->rowCount()<1){
+        return;
+    }
+    QString orderid=ui->orderIDCombobox->currentData(Qt::DecorationRole).toString();
+    UporderForm *settleform=new UporderForm(orderid);
+    settleform->show();
 }
 /**
- * @brief MainWindow::changedishedcheck
+ * @brief 根据菜品的ID改变菜品的选择状态和选择数量
  * @param id 要改变dishesmode中数据的ID值
  * @param num 已点数量变到值
  */
-void MainWindow::changedishedcheck(int id, int num)
+void MainWindow::changedishedcheck(int id, int changenum)
 {
     QModelIndex dishesmodelindex=finddishes("id",id);
     if(dishesmodelindex.row()<0)return;
-    changedishedcheck(dishesmodelindex,num);
+    changedishedcheck(dishesmodelindex,changenum);
 }
 /**
- * @brief MainWindow::changedishedcheck
+ * @brief 根据点菜的具体数据,改变菜品的状态
+ * @param 添加或者减少的菜品具体数据
+ * @param 改变量
+ */
+void MainWindow::changedishedcheck(QJsonObject dishesobject,int changenum)
+{
+    QModelIndex dishesmodelindex;
+    if(dishesobject.value("r_index").toVariant().isNull()){
+       dishesmodelindex=finddishes("id",dishesobject.value("id").toVariant().toInt());
+    }else{
+       int t_r = dishesobject.value("r_index").toVariant().toInt();
+       int t_c = dishesobject.value("c_index").toVariant().toInt();
+       dishesmodelindex=dishesModel->index(t_r,t_c);
+    }
+    changedishedcheck(dishesmodelindex,changenum);
+}
+/**
+ * @brief 改变菜品数量最终执行方法
  * @param index dishesmodel的index
  * @param changenum 改变量
  * @return 无返回值
  */
-void MainWindow::changedishedcheck(QModelIndex index, int num)
+void MainWindow::changedishedcheck(QModelIndex index, int changenum)
 {
-
     if(viewtype==scaleview||viewtype==wordbutton){
         QJsonObject jsonobj=index.data().toJsonObject();
-        if(num>0){
-            jsonobj.insert("checkednum",num);
+        int newnum=jsonobj.value("checkednum").toVariant().toInt()+changenum;
+        if(newnum>0){
+            jsonobj.insert("checkednum",newnum);
             jsonobj.insert("selected",true);
         }else{
             jsonobj.insert("checkednum",0);
@@ -385,8 +425,9 @@ void MainWindow::changedishedcheck(QModelIndex index, int num)
         dishesModel->setData(index,jsonobj);
     }else{
         int rowindex=index.row();
-        if(num>0){
-            dishesModel->setData(dishesModel->index(rowindex,5),num);
+        int newnum=dishesModel->index(rowindex,5).data().toInt()+changenum;
+        if(newnum>0){
+            dishesModel->setData(dishesModel->index(rowindex,5),newnum);
         }else{
             dishesModel->setData(dishesModel->index(rowindex,5),0);
         }
@@ -432,12 +473,6 @@ void MainWindow::switchViewtype(int newviewtype)
             ui->tableView->setColumnWidth(cindex,rowwidth);
             QJsonObject jsonobj=dishesJsonListData.at(i).toObject();
             jsonobj.insert("viewtype",newviewtype);
-            //qDebug()<<"是否已经下订单:"<<findordered(QString::number(jsonobj.value("ID").toInt()));
-            int t_orderindex=findordered(jsonobj.value("id").toVariant().toInt());
-            if(t_orderindex>=0){
-                jsonobj.insert("selected",true);
-                jsonobj.insert("checkednum",orderModel->index(t_orderindex,2).data().toInt());
-            }
             if(quickindex<9)jsonobj.insert("quick",++quickindex);
             dishesModel->setData(dishesModel->index(rindex,cindex),jsonobj);
             cindex=cindex>=colmncount-1?0:cindex+1;
@@ -462,24 +497,25 @@ void MainWindow::switchViewtype(int newviewtype)
         //解析数据
         for(int i=0;i<dishesJsonListData.size();++i){
             QJsonObject jsonobj=dishesJsonListData.at(i).toObject();
-            int t_orderindex=findordered(jsonobj.value("id").toVariant().toInt());
-            if(t_orderindex>=0){
-                jsonobj.insert("selected",true);
-                jsonobj.insert("checkednum",orderModel->index(t_orderindex,2).data().toInt());
-            }
             dishesModel->insertRow(i);
             dishesModel->setData(dishesModel->index(i,0),jsonobj.value("barcode").toVariant());
             dishesModel->setData(dishesModel->index(i,1),jsonobj.value("sort").toVariant());
             dishesModel->setData(dishesModel->index(i,2),jsonobj.value("classname").toVariant());
             dishesModel->setData(dishesModel->index(i,3),jsonobj.value("name").toVariant());
             dishesModel->setData(dishesModel->index(i,4),jsonobj.value("bprice").toVariant());
-            dishesModel->setData(dishesModel->index(i,5),jsonobj.value("checkednum").toVariant());
+            dishesModel->setData(dishesModel->index(i,5),0);
             dishesModel->setData(dishesModel->index(i,6),jsonobj.value("supply").toVariant());
             dishesModel->setData(dishesModel->index(i,7),jsonobj.value("desc").toVariant());
             dishesModel->setData(dishesModel->index(i,8),jsonobj);
         }
     }
     viewtype=newviewtype;
+    emit updatetoptipmessage("正在加载订单状态",0);
+    for(int i=0;i<orderModel->rowCount();i++){
+        int id=orderModel->index(i,4).data().toInt();
+        int num=orderModel->index(i,2).data().toInt();
+        changedishedcheck(id,num);
+    }
     emit updatetoptipmessage("视图更新完成!!!",0);
 }
 /**
@@ -529,8 +565,7 @@ void MainWindow::on_comboBox_activated(int index)
 //表格项目双击事件
 void MainWindow::on_tableView_doubleClicked(const QModelIndex &index)
 {
-    increasedishes(fetchDishesID(index),1,false);
-    changedishedcheck(index,1);
+    increasedishes(fetchDishesData(index),1);
 }
 void MainWindow::resizeGridClomn(int logicalIndex, int oldSize, int newSize)
 {
@@ -593,7 +628,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             ui->tableView->setFocus();
         }
         if(focusWidget()==ui->tableView){
-            increasedishes(fetchDishesID(ui->tableView->currentIndex()));
+            increasedishes(fetchDishesData(ui->tableView->currentIndex()));
             ui->lineEdit->clear();
             ui->lineEdit->setFocus();
         }
@@ -606,14 +641,16 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
             ui->tableView->setFocus();
             return;
         }
-        ui->tableView_2->selectRow(t_index);
+
         if(event->key()==Qt::Key_Plus){
             QModelIndex modelindex=finddishes("id",orderModel->index(t_index,4).data());
-            increasedishes(fetchDishesID(modelindex),1);
+            increasedishes(fetchDishesData(modelindex),1);
+            ui->tableView_2->selectRow(t_index);
         }
         else if(event->key()==Qt::Key_Minus){
-            decreasedishes(t_index,1,true);
+            if(decreasedishes(t_index,1,true)<=0)
             ui->tableView_2->setCurrentIndex(orderModel->index(orderModel->rowCount()-1,0));
+            else ui->tableView_2->selectRow(t_index);
         }
     }
     if(focusWidget()==ui->tableView&&ui->tableView->currentIndex().row()>=0){
@@ -622,12 +659,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
         }
         else if(keyindex==Qt::Key_Minus)
         {
-             decreasedishes(fetchDishesID(ui->tableView->currentIndex()));
+             decreasedishes(fetchDishesData(ui->tableView->currentIndex()));
         }
         else if(keyindex>48&&keyindex<=57){
             QModelIndex dishesmodelindex=finddishes("quick",keyindex-48);
             if(dishesmodelindex.row()>-1){
-                increasedishes(fetchDishesID(dishesmodelindex));
+                increasedishes(fetchDishesData(dishesmodelindex));
             }
         }
     }
@@ -956,7 +993,7 @@ bool MainWindow::eventFilter(QObject *target, QEvent *event){
                 qDebug()<<"ctrl事件在lineedit";
                 QModelIndex dishesmodelindex=finddishes("quick",keyindex-48);
                 if(dishesmodelindex.row()>-1){
-                    increasedishes(fetchDishesID(dishesmodelindex));
+                    increasedishes(fetchDishesData(dishesmodelindex));
                     ui->lineEdit->clear();
                 }
                 return true;
